@@ -41,6 +41,7 @@ PRODUCT_VENDOR_PROPERTIES += \
     persist.vendor.audio_fx.current=dolby \
     vendor.audio.dolby.ds2.enabled=true \
     vendor.audio.dolby.ds2.hardbypass=true \
+    ro.vendor.audio.dolby.dax.support=true \
     ro.vendor.dolby.dax.version=DAX3_3.6.0.12_r1 \
    
 PRODUCT_PACKAGES += \
