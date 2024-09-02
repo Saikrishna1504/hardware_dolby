@@ -17,7 +17,6 @@ soong_namespace {
 
 android_app_import {
 	name: "MotoSignatureApp",
-	owner: "realme",
 	apk: "proprietary/system_ext/app/MotoSignatureApp/MotoSignatureApp.apk",
 	certificate: "platform",
 	dex_preopt: {
@@ -28,7 +27,6 @@ android_app_import {
 
 android_app_import {
 	name: "MotoDolbyDax3",
-	owner: "realme",
 	apk: "proprietary/system_ext/priv-app/MotoDolbyDax3/MotoDolbyDax3.apk",
 	overrides: ["MusicFX"],
 	certificate: "platform",
@@ -41,7 +39,6 @@ android_app_import {
 
 android_app_import {
 	name: "MotorolaSettingsProvider",
-	owner: "realme",
 	apk: "proprietary/system_ext/priv-app/MotorolaSettingsProvider/MotorolaSettingsProvider.apk",
 	certificate: "platform",
 	dex_preopt: {
@@ -53,7 +50,6 @@ android_app_import {
 
 android_app_import {
 	name: "daxService",
-	owner: "realme",
 	apk: "proprietary/system_ext/priv-app/daxService/daxService.apk",
 	certificate: "platform",
 	dex_preopt: {
@@ -65,35 +61,30 @@ android_app_import {
 
 dex_import {
 	name: "com.motorola.frameworks.core.addon",
-	owner: "realme",
 	jars: ["proprietary/system_ext/framework/com.motorola.frameworks.core.addon.jar"],
 	system_ext_specific: true,
 }
 
 dex_import {
 	name: "com.motorola.motosignature",
-	owner: "realme",
 	jars: ["proprietary/system_ext/framework/com.motorola.motosignature.jar"],
 	system_ext_specific: true,
 }
 
 dex_import {
 	name: "moto-checkin",
-	owner: "realme",
 	jars: ["proprietary/system_ext/framework/moto-checkin.jar"],
 	system_ext_specific: true,
 }
 
 dex_import {
 	name: "moto-settings",
-	owner: "realme",
 	jars: ["proprietary/system_ext/framework/moto-settings.jar"],
 	system_ext_specific: true,
 }
 
 dex_import {
 	name: "moto",
-	owner: "realme",
 	jars: ["proprietary/system_ext/framework/moto.jar"],
 	system_ext_specific: true,
 }
