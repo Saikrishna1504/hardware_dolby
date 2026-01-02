@@ -97,9 +97,9 @@ PRODUCT_VENDOR_PROPERTIES += \
 PRODUCT_PACKAGES += \
     RemovePackagesDolby
 
-# DolbyAtmos
+# DolbyManager
 PRODUCT_PACKAGES += \
-    DolbyAtmos
+    DolbyManager
 
 # Dolby Proprietary blobs
 PRODUCT_COPY_FILES += \
