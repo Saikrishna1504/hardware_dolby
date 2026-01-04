@@ -113,14 +113,6 @@ class AppProfileMonitorService : Service() {
                     } else if (originalProfile >= 0) {
                         DolbyConstants.dlog(TAG, "Restoring original profile $originalProfile for $packageName")
                         dolbyRepository.setCurrentProfile(originalProfile)
-                        
-                        if (showToasts) {
-                            val profileName = getProfileName(originalProfile)
-                            ToastHelper.showToast(
-                                this@AppProfileMonitorService,
-                                "Dolby: $profileName (Default)"
-                            )
-                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error switching profile", e)
