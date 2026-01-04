@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import org.lunaris.dolby.utils.*
 
 @Composable
 fun EnhancedBottomNavigationBar(
@@ -78,6 +80,8 @@ private fun EnhancedNavItem(
     isEqualizer: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
     
     var isBouncing by remember { mutableStateOf(false) }
     val bounceScale by animateFloatAsState(
@@ -124,6 +128,9 @@ private fun EnhancedNavItem(
                 interactionSource = interactionSource,
                 indication = null
             ) {
+                scope.launch {
+                    haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.HEAVY_CLICK)
+                }
                 isBouncing = true
                 onClick()
             },

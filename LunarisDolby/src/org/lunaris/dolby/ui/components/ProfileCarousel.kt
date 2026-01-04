@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import kotlinx.coroutines.launch
 import org.lunaris.dolby.R
+import org.lunaris.dolby.utils.*
 import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -46,6 +47,8 @@ fun ProfileCarousel(
 ) {
     val profiles = stringArrayResource(R.array.dolby_profile_entries)
     val profileValues = stringArrayResource(R.array.dolby_profile_values)
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
     
     val profileIcons = mapOf(
         0 to Icons.Default.AutoAwesome,
@@ -73,12 +76,17 @@ fun ProfileCarousel(
         pageCount = { profiles.size }
     )
     
-    val scope = rememberCoroutineScope()
+    var lastPage by remember { mutableIntStateOf(initialPage) }
     
     LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage != initialPage) {
-            val selectedValue = profileValues[pagerState.currentPage].toInt()
-            onProfileChange(selectedValue)
+        if (pagerState.currentPage != lastPage) {
+            haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
+            lastPage = pagerState.currentPage
+            
+            if (pagerState.currentPage != initialPage) {
+                val selectedValue = profileValues[pagerState.currentPage].toInt()
+                onProfileChange(selectedValue)
+            }
         }
     }
     
@@ -119,6 +127,7 @@ fun ProfileCarousel(
                     pageOffset = pageOffset,
                     onClick = {
                         scope.launch {
+                            haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
                             pagerState.animateScrollToPage(page)
                         }
                     }

@@ -33,10 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 import org.lunaris.dolby.R
 import org.lunaris.dolby.domain.models.EqualizerUiState
 import org.lunaris.dolby.ui.components.*
 import org.lunaris.dolby.ui.viewmodel.EqualizerViewModel
+import org.lunaris.dolby.domain.models.EqualizerPreset
+import org.lunaris.dolby.utils.*
 
 enum class EqualizerViewMode {
     CURVE,
@@ -452,13 +455,15 @@ private fun ViewModeTile(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ModernPresetSelector(
-    presets: List<org.lunaris.dolby.domain.models.EqualizerPreset>,
-    currentPreset: org.lunaris.dolby.domain.models.EqualizerPreset,
-    onPresetSelected: (org.lunaris.dolby.domain.models.EqualizerPreset) -> Unit,
+fun ModernPresetSelector(
+    presets: List<EqualizerPreset>,
+    currentPreset: EqualizerPreset,
+    onPresetSelected: (EqualizerPreset) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
 
     Column(modifier = modifier.padding(20.dp)) {
         Text(
@@ -470,7 +475,12 @@ private fun ModernPresetSelector(
         
         ExposedDropdownMenuBox(
             expanded = expanded,
-            onExpandedChange = { expanded = it }
+            onExpandedChange = { 
+                scope.launch {
+                    haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.TICK)
+                }
+                expanded = it 
+            }
         ) {
             Surface(
                 modifier = Modifier
@@ -533,6 +543,9 @@ private fun ModernPresetSelector(
                             }
                         },
                         onClick = {
+                            scope.launch {
+                                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.CLICK)
+                            }
                             onPresetSelected(preset)
                             expanded = false
                         }
@@ -544,13 +557,16 @@ private fun ModernPresetSelector(
 }
 
 @Composable
-private fun ModernEqualizerBand(
+fun ModernEqualizerBand(
     frequency: Int,
     gain: Int,
     onGainChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var sliderValue by remember(gain) { mutableFloatStateOf(gain / 10f) }
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
+    var lastHapticValue by remember { mutableIntStateOf((gain / 10f).toInt()) }
 
     Column(
         modifier = modifier
@@ -571,10 +587,18 @@ private fun ModernEqualizerBand(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }
-        
         Slider(
             value = sliderValue,
-            onValueChange = { sliderValue = it },
+            onValueChange = { newValue ->
+                val intValue = (newValue * 10).toInt() / 10
+                if (intValue != lastHapticValue) {
+                    scope.launch {
+                        haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.TEXTURE_TICK)
+                    }
+                    lastHapticValue = intValue
+                }
+                sliderValue = newValue
+            },
             onValueChangeFinished = {
                 onGainChange((sliderValue * 10).toInt())
             },
@@ -582,7 +606,7 @@ private fun ModernEqualizerBand(
             modifier = Modifier
                 .graphicsLayer {
                     rotationZ = 270f
-                    transformOrigin = TransformOrigin(0f, 0f)
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
                 }
                 .layout { measurable, constraints ->
                     val placeable = measurable.measure(
@@ -605,7 +629,6 @@ private fun ModernEqualizerBand(
                 inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         )
-        
         Text(
             text = if (frequency >= 1000) "${frequency / 1000}k" else "$frequency",
             style = MaterialTheme.typography.labelSmall,

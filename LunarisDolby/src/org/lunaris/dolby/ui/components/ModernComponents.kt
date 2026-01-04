@@ -24,9 +24,11 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.lunaris.dolby.R
 import org.lunaris.dolby.domain.models.ProfileSettings
 import org.lunaris.dolby.ui.viewmodel.DolbyViewModel
+import org.lunaris.dolby.utils.*
 
 @Composable
 fun DolbyMainCard(
@@ -34,6 +36,9 @@ fun DolbyMainCard(
     onEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
+    
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -89,7 +94,12 @@ fun DolbyMainCard(
                     }
                     Switch(
                         checked = enabled,
-                        onCheckedChange = onEnabledChange,
+                        onCheckedChange = { 
+                            scope.launch {
+                                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.HEAVY_CLICK)
+                            }
+                            onEnabledChange(it)
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
                             checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
@@ -172,6 +182,9 @@ fun ModernSettingSwitch(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null
 ) {
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
+    
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -221,7 +234,12 @@ fun ModernSettingSwitch(
             
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = { 
+                    scope.launch {
+                        haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
+                    }
+                    onCheckedChange(it)
+                }
             )
         }
     }
@@ -237,6 +255,10 @@ fun ModernSettingSlider(
     modifier: Modifier = Modifier,
     valueLabel: (Int) -> String = { it.toString() }
 ) {
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
+    var lastHapticValue by remember { mutableIntStateOf(value) }
+    
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -267,7 +289,16 @@ fun ModernSettingSlider(
         
         Slider(
             value = value.toFloat(),
-            onValueChange = onValueChange,
+            onValueChange = { newValue ->
+                val intValue = newValue.toInt()
+                if (intValue != lastHapticValue) {
+                    scope.launch {
+                        haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.TEXTURE_TICK)
+                    }
+                    lastHapticValue = intValue
+                }
+                onValueChange(newValue)
+            },
             valueRange = valueRange,
             steps = steps,
             modifier = Modifier.fillMaxWidth(),
@@ -295,6 +326,8 @@ fun ModernSettingSelector(
     val currentIndex = valueList.indexOfFirst { it.toIntOrNull() == currentValue }
     val label = entryList.getOrElse(currentIndex.coerceAtLeast(0)) { "" }
     var expanded by remember { mutableStateOf(false) }
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -320,7 +353,12 @@ fun ModernSettingSelector(
             }
             Box {
                 Surface(
-                    onClick = { expanded = true },
+                    onClick = { 
+                        scope.launch {
+                            haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.TICK)
+                        }
+                        expanded = true 
+                    },
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                 ) {
@@ -350,6 +388,9 @@ fun ModernSettingSelector(
                         DropdownMenuItem(
                             text = { Text(entry) },
                             onClick = {
+                                scope.launch {
+                                    haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.CLICK)
+                                }
                                 expanded = false
                                 onValueChange(value)
                             }
@@ -441,8 +482,16 @@ private fun IeqTile(
     onPresetChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
+    
     Surface(
-        onClick = { onPresetChange(value) },
+        onClick = { 
+            scope.launch {
+                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
+            }
+            onPresetChange(value) 
+        },
         modifier = modifier.height(72.dp),
         color = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
