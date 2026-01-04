@@ -19,6 +19,8 @@ class DolbyViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<DolbyUiState>(DolbyUiState.Loading)
     val uiState: StateFlow<DolbyUiState> = _uiState.asStateFlow()
+    
+    val profileChanged: StateFlow<Int> = repository.profileChanged
 
     init {
         loadSettings()

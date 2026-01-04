@@ -29,6 +29,9 @@ class DolbyRepository(private val context: Context) {
     
     private val _isOnSpeaker = MutableStateFlow(checkIsOnSpeaker())
     val isOnSpeaker: StateFlow<Boolean> = _isOnSpeaker.asStateFlow()
+    
+    private val _profileChanged = MutableStateFlow(0)
+    val profileChanged: StateFlow<Int> = _profileChanged.asStateFlow()
 
     val stereoWideningSupported = context.resources.getBoolean(R.bool.dolby_stereo_widening_supported)
     val volumeLevelerSupported = context.resources.getBoolean(R.bool.dolby_volume_leveler_supported)
@@ -67,6 +70,25 @@ class DolbyRepository(private val context: Context) {
         checkEffect()
         dolbyEffect.profile = profile
         defaultPrefs.edit().putString(DolbyConstants.PREF_PROFILE, profile.toString()).apply()
+        restoreProfilePreset(profile)
+        _profileChanged.value = _profileChanged.value + 1
+    }
+
+    private fun restoreProfilePreset(profile: Int) {
+        try {
+            val prefs = getProfilePrefs(profile)
+            val savedPresetGains = prefs.getString(DolbyConstants.PREF_PRESET, null)
+            
+            if (savedPresetGains != null) {
+                val gains = savedPresetGains.split(",").mapNotNull { it.toIntOrNull() }.toIntArray()
+                if (gains.size == 20) {
+                    dolbyEffect.setDapParameter(DsParam.GEQ_BAND_GAINS, gains, profile)
+                    DolbyConstants.dlog(TAG, "Restored preset for profile $profile")
+                }
+            }
+        } catch (e: Exception) {
+            DolbyConstants.dlog(TAG, "Failed to restore preset for profile $profile: ${e.message}")
+        }
     }
 
     private fun getProfilePrefs(profile: Int): SharedPreferences {
@@ -108,6 +130,9 @@ class DolbyRepository(private val context: Context) {
         applyBassCurve(modifiedGains, level, previousCurve, -1)
         applyBassCurve(modifiedGains, level, curve, 1)
         dolbyEffect.setDapParameter(DsParam.GEQ_BAND_GAINS, modifiedGains, profile)
+        
+        val gainsString = modifiedGains.joinToString(",")
+        prefs.edit().putString(DolbyConstants.PREF_PRESET, gainsString).apply()
     }
 
     private fun applyBassCurve(gains: IntArray, level: Int, curve: Int, direction: Int) {
@@ -144,6 +169,10 @@ class DolbyRepository(private val context: Context) {
                 applyBassCurve(modifiedGains, level, curve, 1)
             }
             dolbyEffect.setDapParameter(DsParam.GEQ_BAND_GAINS, modifiedGains, profile)
+            
+            val gainsString = modifiedGains.joinToString(",")
+            prefs.edit().putString(DolbyConstants.PREF_PRESET, gainsString).apply()
+            
             DolbyConstants.dlog(TAG, "setBassLevel: success")
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "setBassLevel: error - ${e.message}")
@@ -199,6 +228,10 @@ class DolbyRepository(private val context: Context) {
             }
 
             dolbyEffect.setDapParameter(DsParam.GEQ_BAND_GAINS, modifiedGains, profile)
+            
+            val gainsString = modifiedGains.joinToString(",")
+            prefs.edit().putString(DolbyConstants.PREF_PRESET, gainsString).apply()
+            
             DolbyConstants.dlog(TAG, "setTrebleLevel: success")
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "setTrebleLevel: error - ${e.message}")

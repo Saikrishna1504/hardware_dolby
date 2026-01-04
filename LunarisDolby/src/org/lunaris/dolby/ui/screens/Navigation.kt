@@ -6,6 +6,7 @@
 package org.lunaris.dolby.ui.screens
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -37,6 +38,10 @@ fun DolbyNavHost(
         }
 
         composable(Screen.Equalizer.route) {
+            LaunchedEffect(Unit) {
+                equalizerViewModel.loadEqualizer()
+            }
+            
             ModernEqualizerScreen(
                 viewModel = equalizerViewModel,
                 navController = navController

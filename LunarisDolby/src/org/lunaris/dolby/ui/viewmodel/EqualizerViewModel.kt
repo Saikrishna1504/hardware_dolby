@@ -26,6 +26,11 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         loadEqualizer()
+        viewModelScope.launch {
+            repository.profileChanged.collect {
+                loadEqualizer()
+            }
+        }
     }
 
     fun loadEqualizer() {
