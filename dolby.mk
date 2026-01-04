@@ -97,9 +97,9 @@ PRODUCT_VENDOR_PROPERTIES += \
 PRODUCT_PACKAGES += \
     RemovePackagesDolby
 
-# DolbyManager
+# LunarisDolby
 PRODUCT_PACKAGES += \
-    DolbyManager
+    LunarisDolby
 
 # Dolby Proprietary blobs
 PRODUCT_COPY_FILES += \
