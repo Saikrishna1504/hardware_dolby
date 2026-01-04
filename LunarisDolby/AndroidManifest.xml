@@ -9,6 +9,8 @@
     android:sharedUserId="android.uid.system">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <application
         android:icon="@mipmap/ic_launcher"
@@ -67,6 +69,11 @@
             android:name=".provider.SummaryProvider"
             android:authorities="org.lunaris.dolby.summary">
         </provider>
+
+        <service
+            android:name=".service.AppProfileMonitorService"
+            android:exported="false"
+            android:enabled="true" />
 
     </application>
 </manifest>

@@ -98,4 +98,17 @@
     <string name="dolby_warm">Warm</string>
     <string name="dolby_detailed">Detailed</string>
 
+    <!-- Per-App Audio Profiles -->
+    <string name="app_profiles_title">Per-App Audio Profiles</string>
+    <string name="app_profiles_description">Assign different audio profiles to individual apps for optimized sound based on content type</string>
+    <string name="app_profiles_search_hint">Search apps...</string>
+    <string name="app_profiles_no_apps">No apps found</string>
+    <string name="app_profiles_loading">Loading apps...</string>
+    <string name="app_profiles_clear_all">Clear All App Profiles</string>
+    <string name="app_profiles_clear_all_message">This will remove all per-app profile assignments. Apps will use the default profile.</string>
+    <string name="app_profiles_manage">Manage App Profiles</string>
+    <string name="app_profiles_default">Default</string>
+    <string name="app_profiles_change">Change</string>
+    <string name="app_profiles_assigned">Assigned: %1$s</string>
+
 </resources>

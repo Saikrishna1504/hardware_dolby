@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import org.lunaris.dolby.data.DolbyRepository
+import org.lunaris.dolby.service.AppProfileMonitorService
 
 class BootCompletedReceiver : BroadcastReceiver() {
 
@@ -26,6 +27,11 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     if (enabled) {
                         repository.setDolbyEnabled(true)
                         repository.setCurrentProfile(profile)
+                    }
+                    
+                    val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+                    if (prefs.getBoolean("app_profile_monitoring_enabled", false)) {
+                        AppProfileMonitorService.startMonitoring(context)
                     }
                     
                     Log.d(TAG, "Dolby initialized: enabled=$enabled, profile=$profile")

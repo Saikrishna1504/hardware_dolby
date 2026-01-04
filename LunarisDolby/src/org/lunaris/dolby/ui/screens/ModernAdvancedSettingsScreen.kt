@@ -77,6 +77,7 @@ fun ModernAdvancedSettingsScreen(
                 ModernAdvancedSettingsContent(
                     state = state,
                     viewModel = viewModel,
+                    navController = navController,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -113,6 +114,7 @@ fun ModernAdvancedSettingsScreen(
 private fun ModernAdvancedSettingsContent(
     state: DolbyUiState.Success,
     viewModel: DolbyViewModel,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -326,6 +328,12 @@ private fun ModernAdvancedSettingsContent(
                     }
                 }
             }
+        }
+
+        item {
+            AppProfileSettingsCard(
+                onManageClick = { navController.navigate("app_profiles") }
+            )
         }
         
         item {
