@@ -5,12 +5,15 @@
 -->
 <resources>
 
-    <!-- Dolby Atmos - Removed Voice profile, kept 4 profiles -->
+    <!-- Dolby Atmos -->
     <string-array name="dolby_profile_entries">
         <item>@string/dolby_profile_dynamic</item>
         <item>@string/dolby_profile_video</item>
         <item>@string/dolby_profile_music</item>
-        <item>@string/dolby_profile_custom</item>
+        <item>@string/dolby_profile_game</item>
+        <item>@string/dolby_profile_work</item>
+        <item>@string/dolby_profile_casual</item>
+        <item>@string/dolby_profile_mood</item>
     </string-array>
 
     <string-array name="dolby_profile_values">
@@ -18,6 +21,9 @@
         <item>1</item>
         <item>2</item>
         <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
     </string-array>
 
     <string-array name="dolby_preset_entries" translatable="false">

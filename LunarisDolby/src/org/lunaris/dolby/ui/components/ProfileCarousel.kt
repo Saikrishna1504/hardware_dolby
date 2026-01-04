@@ -51,14 +51,20 @@ fun ProfileCarousel(
         0 to Icons.Default.AutoAwesome,
         1 to Icons.Default.Movie,
         2 to Icons.Default.MusicNote,
-        3 to Icons.Default.Tune
+        3 to Icons.Default.SportsEsports,
+        4 to Icons.Default.Work,
+        5 to Icons.Default.Coffee,
+        6 to Icons.Default.Favorite
     )
     
     val profileGradients = listOf(
         listOf(Color(0xFF667eea), Color(0xFF764ba2)),
         listOf(Color(0xFFf093fb), Color(0xFFf5576c)),
         listOf(Color(0xFF4facfe), Color(0xFF00f2fe)),
-        listOf(Color(0xFFfa709a), Color(0xFFfee140))
+        listOf(Color(0xFFfa709a), Color(0xFFfee140)),
+        listOf(Color(0xFF30cfd0), Color(0xFF330867)),
+        listOf(Color(0xFFff9a56), Color(0xFFff6a88)),
+        listOf(Color(0xFFa18cd1), Color(0xFFfbc2eb))
     )
     
     val initialPage = profileValues.indexOfFirst { it.toInt() == currentProfile }.coerceAtLeast(0)
