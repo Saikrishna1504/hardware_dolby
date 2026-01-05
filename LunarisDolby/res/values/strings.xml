@@ -111,4 +111,18 @@
     <string name="app_profiles_change">Change</string>
     <string name="app_profiles_assigned">Assigned: %1$s</string>
 
+    <!-- Preset Import/Export -->
+    <string name="preset_import_export">Import/Export Presets</string>
+    <string name="preset_export_single">Export Preset</string>
+    <string name="preset_import_single">Import Preset</string>
+    <string name="preset_export_batch">Export All Presets</string>
+    <string name="preset_import_batch">Import Multiple Presets</string>
+    <string name="preset_copy_clipboard">Copy to Clipboard</string>
+    <string name="preset_paste_clipboard">Paste from Clipboard</string>
+    <string name="preset_share">Share Preset</string>
+    <string name="preset_export_success">Preset exported successfully</string>
+    <string name="preset_import_success">Preset imported successfully</string>
+    <string name="preset_export_failed">Export failed</string>
+    <string name="preset_import_failed">Import failed</string>
+
 </resources>

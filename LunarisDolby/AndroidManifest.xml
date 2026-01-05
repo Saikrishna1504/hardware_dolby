@@ -54,6 +54,16 @@
                        android:value="content://org.lunaris.dolby.summary/dolby" />
         </activity>
 
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="org.lunaris.dolby.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <service
             android:name=".tile.DolbyTileService"
             android:icon="@drawable/ic_dolby_qs"

@@ -21,6 +21,7 @@ sealed class Screen(val route: String) {
     object Equalizer : Screen("equalizer")
     object Advanced : Screen("advanced")
     object AppProfiles : Screen("app_profiles")
+    object ImportExport : Screen("import_export")
 }
 
 @Composable
@@ -69,6 +70,13 @@ fun DolbyNavHost(
             
             AppProfileScreen(
                 viewModel = appProfileViewModel,
+                navController = navController
+            )
+        }
+        
+        composable(Screen.ImportExport.route) {
+            PresetImportExportScreen(
+                viewModel = equalizerViewModel,
                 navController = navController
             )
         }

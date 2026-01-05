@@ -76,6 +76,9 @@ fun ModernEqualizerScreen(
                     IconButton(onClick = { showResetDialog = true }) {
                         Icon(Icons.Default.RestartAlt, contentDescription = "Reset")
                     }
+                    IconButton(onClick = { navController.navigate("import_export") }) {
+                        Icon(Icons.Default.ImportExport, contentDescription = "Import/Export")
+                    }
                     if (uiState is EqualizerUiState.Success) {
                         val state = uiState as EqualizerUiState.Success
                         if (state.currentPreset.isUserDefined) {
