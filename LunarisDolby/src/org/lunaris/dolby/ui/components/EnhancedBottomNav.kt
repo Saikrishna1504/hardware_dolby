@@ -37,20 +37,22 @@ fun EnhancedBottomNavigationBar(
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 3.dp,
-        shadowElevation = 0.dp
+        shadowElevation = 8.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .padding(horizontal = 8.dp, vertical = 12.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             EnhancedNavItem(
                 icon = Icons.Default.Home,
                 label = "Home",
                 selected = currentRoute == "settings",
-                onClick = { onNavigate("settings") }
+                onClick = { onNavigate("settings") },
+                modifier = Modifier.weight(1f)
             )
             
             EnhancedNavItem(
@@ -58,14 +60,16 @@ fun EnhancedBottomNavigationBar(
                 label = "Equalizer",
                 selected = currentRoute == "equalizer",
                 onClick = { onNavigate("equalizer") },
-                isEqualizer = true
+                isEqualizer = true,
+                modifier = Modifier.weight(1f)
             )
             
             EnhancedNavItem(
                 icon = Icons.Default.Settings,
                 label = "Advanced",
                 selected = currentRoute == "advanced",
-                onClick = { onNavigate("advanced") }
+                onClick = { onNavigate("advanced") },
+                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -77,6 +81,7 @@ private fun EnhancedNavItem(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     isEqualizer: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -95,7 +100,7 @@ private fun EnhancedNavItem(
     )
     
     val backgroundWidth by animateDpAsState(
-        targetValue = if (selected) 140.dp else 52.dp,
+        targetValue = if (selected) 120.dp else 52.dp,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -104,7 +109,7 @@ private fun EnhancedNavItem(
     )
     
     val backgroundHeight by animateDpAsState(
-        targetValue = if (selected) 57.dp else 49.dp,
+        targetValue = if (selected) 52.dp else 48.dp,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -113,87 +118,93 @@ private fun EnhancedNavItem(
     )
     
     Box(
-        modifier = Modifier
-            .height(backgroundHeight)
-            .width(backgroundWidth)
-            .clip(RoundedCornerShape(if (selected) 50.dp else 16.dp))
-            .background(
-                color = if (selected) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surface
-                }
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) {
-                scope.launch {
-                    haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.HEAVY_CLICK)
-                }
-                isBouncing = true
-                onClick()
-            },
+        modifier = modifier.wrapContentWidth(Alignment.CenterHorizontally),
         contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier.scale(bounceScale),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isEqualizer) {
-                    AnimatedEqualizerIconDynamic(
-                        color = if (selected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        size = 24.dp
-                    )
-                } else {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = label,
-                        tint = if (selected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-            
-            AnimatedVisibility(
-                visible = selected,
-                enter = fadeIn(
-                    animationSpec = tween(300, delayMillis = 100)
-                ) + expandHorizontally(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium
-                    ),
-                    expandFrom = Alignment.Start
-                ),
-                exit = fadeOut(
-                    animationSpec = tween(200)
-                ) + shrinkHorizontally(
-                    animationSpec = tween(300),
-                    shrinkTowards = Alignment.Start
+        Box(
+            modifier = Modifier
+                .height(backgroundHeight)
+                .width(backgroundWidth)
+                .clip(RoundedCornerShape(if (selected) 50.dp else 16.dp))
+                .background(
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
                 )
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null
+                ) {
+                    scope.launch {
+                        haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.HEAVY_CLICK)
+                    }
+                    isBouncing = true
+                    onClick()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Row {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                Box(
+                    modifier = Modifier.scale(bounceScale),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isEqualizer) {
+                        AnimatedEqualizerIconDynamic(
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            size = 24.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = label,
+                            tint = if (selected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                
+                AnimatedVisibility(
+                    visible = selected,
+                    enter = fadeIn(
+                        animationSpec = tween(300, delayMillis = 100)
+                    ) + expandHorizontally(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        expandFrom = Alignment.Start
+                    ),
+                    exit = fadeOut(
+                        animationSpec = tween(200)
+                    ) + shrinkHorizontally(
+                        animationSpec = tween(300),
+                        shrinkTowards = Alignment.Start
                     )
+                ) {
+                    Row {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
         }
