@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import org.lunaris.dolby.domain.models.BandGain
+import org.lunaris.dolby.domain.models.BandMode
 import org.lunaris.dolby.domain.models.EqualizerPreset
 import java.io.*
 import java.util.zip.GZIPInputStream
@@ -20,7 +21,7 @@ import java.util.zip.GZIPOutputStream
 class PresetExportManager(private val context: Context) {
 
     companion object {
-        private const val PRESET_FILE_VERSION = 1
+        private const val PRESET_FILE_VERSION = 2
         private const val FILE_EXTENSION = ".ldp"
         private const val MIME_TYPE = "application/json"
     }
@@ -31,6 +32,8 @@ class PresetExportManager(private val context: Context) {
             put("name", preset.name)
             put("timestamp", System.currentTimeMillis())
             put("createdBy", "Lunaris Dolby Manager")
+            put("bandMode", preset.bandMode.value)
+            put("bandCount", preset.bandMode.bandCount)
             val gainsArray = JSONArray()
             preset.bandGains.forEach { bandGain ->
                 gainsArray.put(JSONObject().apply {
@@ -51,6 +54,12 @@ class PresetExportManager(private val context: Context) {
             throw IllegalArgumentException("Preset version not supported")
         }
         val name = json.getString("name")
+        val bandMode = if (json.has("bandMode")) {
+            BandMode.fromValue(json.getString("bandMode"))
+        } else {
+            BandMode.TEN_BAND
+        }
+        
         val gainsArray = json.getJSONArray("bandGains")
         val bandGains = mutableListOf<BandGain>()
         for (i in 0 until gainsArray.length()) {
@@ -60,10 +69,19 @@ class PresetExportManager(private val context: Context) {
                 gain = gainObj.getInt("gain")
             ))
         }
+        
+        val expectedCount = bandMode.bandCount
+        if (bandGains.size != expectedCount) {
+            throw IllegalArgumentException(
+                "Band count mismatch: expected $expectedCount, got ${bandGains.size}"
+            )
+        }
+        
         EqualizerPreset(
             name = name,
             bandGains = bandGains,
-            isUserDefined = true
+            isUserDefined = true,
+            bandMode = bandMode
         )
     }
 
@@ -117,6 +135,7 @@ class PresetExportManager(private val context: Context) {
                 put("version", PRESET_FILE_VERSION)
                 put("count", presets.size)
                 put("timestamp", System.currentTimeMillis())
+                put("supportsBandModes", true)
                 
                 val presetsArray = JSONArray()
                 presets.forEach { preset ->
@@ -171,7 +190,7 @@ class PresetExportManager(private val context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val json = exportPresetToJson(preset)
-                val fileName = "${preset.name.replace(" ", "_")}$FILE_EXTENSION"
+                val fileName = "${preset.name.replace(" ", "_")}_${preset.bandMode.value}band$FILE_EXTENSION"
                 val cacheDir = File(context.cacheDir, "shared_presets")
                 cacheDir.mkdirs()
                 val file = File(cacheDir, fileName)
@@ -191,9 +210,10 @@ class PresetExportManager(private val context: Context) {
                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                     type = MIME_TYPE
                     putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Dolby Preset: ${preset.name}")
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, 
+                        "Dolby Preset: ${preset.name} (${preset.bandMode.displayName})")
                     putExtra(android.content.Intent.EXTRA_TEXT, 
-                        "Check out this custom Dolby audio preset!")
+                        "Check out this custom Dolby ${preset.bandMode.displayName} audio preset!")
                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 Result.success(android.content.Intent.createChooser(intent, "Share Preset"))
@@ -209,7 +229,7 @@ class PresetExportManager(private val context: Context) {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) 
                     as android.content.ClipboardManager
                 val clip = android.content.ClipData.newPlainText(
-                    "Dolby Preset: ${preset.name}", 
+                    "Dolby Preset: ${preset.name} (${preset.bandMode.displayName})", 
                     json
                 )
                 clipboard.setPrimaryClip(clip)

@@ -13,7 +13,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -30,15 +32,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import org.lunaris.dolby.R
-import org.lunaris.dolby.domain.models.EqualizerUiState
 import org.lunaris.dolby.ui.components.*
 import org.lunaris.dolby.ui.viewmodel.EqualizerViewModel
-import org.lunaris.dolby.domain.models.EqualizerPreset
+import org.lunaris.dolby.domain.models.*
 import org.lunaris.dolby.utils.*
 
 enum class EqualizerViewMode {
@@ -207,10 +209,12 @@ private fun ModernEqualizerContent(
 ) {
     val isFlatPreset = state.currentPreset.name == stringResource(R.string.dolby_preset_default)
     val isActive = !isFlatPreset
+    val scrollState = rememberScrollState()
     
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -227,6 +231,11 @@ private fun ModernEqualizerContent(
                 onPresetSelected = { viewModel.setPreset(it) }
             )
         }
+        
+        BandModeSelector(
+            currentMode = state.bandMode,
+            onModeChange = { viewModel.setBandMode(it) }
+        )
         
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -290,17 +299,34 @@ private fun ModernEqualizerContent(
                                 .fillMaxSize()
                                 .padding(20.dp)
                         ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Interactive Frequency Response",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Text(
+                                        text = "${state.bandMode.bandCount} bands",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
                             Text(
-                                text = "Interactive Frequency Response",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            Text(
-                                text = "Drag the control points to adjust gain (±15 dB)",
+                                text = "Drag the control points to adjust gain (±15 dB) • ${getFrequencyRange(state.bandMode)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 16.dp)
+                                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                             )
                             InteractiveFrequencyResponseCurve(
                                 bandGains = state.bandGains,
@@ -319,24 +345,44 @@ private fun ModernEqualizerContent(
                 EqualizerViewMode.SLIDERS -> {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp),
                             shape = RoundedCornerShape(24.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                             )
                         ) {
                             Column(modifier = Modifier.padding(20.dp)) {
-                                Text(
-                                    text = "Frequency Response",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Frequency Response",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.secondaryContainer
+                                    ) {
+                                        Text(
+                                            text = getFrequencyRange(state.bandMode),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
                                 FrequencyResponseCurve(
                                     bandGains = state.bandGains,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(120.dp)
+                                        .weight(1f)
                                 )
                             }
                         }
@@ -344,7 +390,7 @@ private fun ModernEqualizerContent(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(280.dp),
+                                .height(380.dp),
                             shape = RoundedCornerShape(24.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -383,7 +429,16 @@ private fun ModernEqualizerContent(
             }
         }
         
-        Spacer(modifier = Modifier.height(60.dp))
+        Spacer(modifier = Modifier.height(80.dp))
+    }
+}
+
+@Composable
+private fun getFrequencyRange(bandMode: BandMode): String {
+    return when (bandMode) {
+        BandMode.TEN_BAND -> "32Hz - 19.7kHz"
+        BandMode.FIFTEEN_BAND -> "32Hz - 19.7kHz"
+        BandMode.TWENTY_BAND -> "32Hz - 19.7kHz"
     }
 }
 
@@ -451,6 +506,139 @@ private fun ViewModeTile(
                     MaterialTheme.colorScheme.onPrimaryContainer
                 else
                     MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun BandModeSelector(
+    currentMode: BandMode,
+    onModeChange: (BandMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
+    
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Band Configuration",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            
+            Text(
+                text = "Choose equalizer precision: more bands = finer control",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                BandMode.values().forEach { mode ->
+                    BandModeTile(
+                        mode = mode,
+                        isSelected = currentMode == mode,
+                        onClick = {
+                            scope.launch {
+                                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
+                            }
+                            onModeChange(mode)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BandModeTile(
+    mode: BandMode,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(80.dp),
+        color = if (isSelected)
+            MaterialTheme.colorScheme.primaryContainer
+        else
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = if (isSelected)
+            RoundedCornerShape(50.dp)
+        else
+            RoundedCornerShape(16.dp),
+        border = if (isSelected)
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        else null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                modifier = Modifier.size(32.dp),
+                shape = if (isSelected)
+                    RoundedCornerShape(50.dp)
+                else
+                    RoundedCornerShape(10.dp),
+                color = if (isSelected)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = mode.value,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(6.dp))
+            
+            Text(
+                text = mode.displayName,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected)
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                else
+                    MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
             )
         }
     }

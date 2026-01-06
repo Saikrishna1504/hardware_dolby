@@ -95,6 +95,20 @@ class DolbyRepository(private val context: Context) {
         return context.getSharedPreferences("profile_$profile", Context.MODE_PRIVATE)
     }
 
+    fun getBandMode(): BandMode {
+        val mode = defaultPrefs.getString(DolbyConstants.PREF_BAND_MODE, "10")
+        return when (mode) {
+            "10" -> BandMode.TEN_BAND
+            "15" -> BandMode.FIFTEEN_BAND
+            "20" -> BandMode.TWENTY_BAND
+            else -> BandMode.TEN_BAND
+        }
+    }
+
+    fun setBandMode(mode: BandMode) {
+        defaultPrefs.edit().putString(DolbyConstants.PREF_BAND_MODE, mode.value).apply()
+    }
+
     fun getBassEnhancerEnabled(profile: Int): Boolean {
         return dolbyEffect.getDapParameterBool(DsParam.BASS_ENHANCER_ENABLE, profile)
     }
@@ -312,14 +326,14 @@ class DolbyRepository(private val context: Context) {
         getProfilePrefs(profile).edit().putInt(DolbyConstants.PREF_DIALOGUE_AMOUNT, amount).apply()
     }
 
-    fun getEqualizerGains(profile: Int): List<BandGain> {
+    fun getEqualizerGains(profile: Int, bandMode: BandMode): List<BandGain> {
         val gains = dolbyEffect.getDapParameter(DsParam.GEQ_BAND_GAINS, profile)
-        return deserializeGains(gains)
+        return deserializeGains(gains, bandMode)
     }
 
-    fun setEqualizerGains(profile: Int, bandGains: List<BandGain>) {
+    fun setEqualizerGains(profile: Int, bandGains: List<BandGain>, bandMode: BandMode) {
         checkEffect()
-        val gains = serializeGains(bandGains)
+        val gains = serializeGains(bandGains, bandMode)
         dolbyEffect.setDapParameter(DsParam.GEQ_BAND_GAINS, gains, profile)
         val gainsString = gains.joinToString(",")
         getProfilePrefs(profile).edit().putString(DolbyConstants.PREF_PRESET, gainsString).apply()
@@ -376,18 +390,39 @@ class DolbyRepository(private val context: Context) {
     }
 
     fun getUserPresets(): List<EqualizerPreset> {
-        return presetsPrefs.all.map { (name, value) ->
-            EqualizerPreset(
-                name = name,
-                bandGains = deserializeGains(value.toString().split(",").map { it.toInt() }.toIntArray()),
-                isUserDefined = true
-            )
+        val bandMode = getBandMode()
+        return presetsPrefs.all.mapNotNull { (name, value) ->
+            try {
+                val valueStr = value.toString()
+                if (valueStr.contains("|")) {
+                    val parts = valueStr.split("|")
+                    val presetBandMode = BandMode.fromValue(parts[1])
+                    val gains = parts[0].split(",").map { it.toInt() }.toIntArray()
+                    EqualizerPreset(
+                        name = name,
+                        bandGains = deserializeGains(gains, presetBandMode),
+                        isUserDefined = true,
+                        bandMode = presetBandMode
+                    )
+                } else {
+                    val gains = valueStr.split(",").map { it.toInt() }.toIntArray()
+                    EqualizerPreset(
+                        name = name,
+                        bandGains = deserializeGains(gains, BandMode.TEN_BAND),
+                        isUserDefined = true,
+                        bandMode = BandMode.TEN_BAND
+                    )
+                }
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 
-    fun addUserPreset(name: String, bandGains: List<BandGain>) {
-        val gains = serializeGains(bandGains).joinToString(",")
-        presetsPrefs.edit().putString(name, gains).apply()
+    fun addUserPreset(name: String, bandGains: List<BandGain>, bandMode: BandMode) {
+        val gains = serializeGains(bandGains, bandMode).joinToString(",")
+        val value = "$gains|${bandMode.value}"
+        presetsPrefs.edit().putString(name, value).apply()
     }
 
     fun deleteUserPreset(name: String) {
@@ -408,34 +443,62 @@ class DolbyRepository(private val context: Context) {
         setCurrentProfile(0)
     }
 
-    private fun deserializeGains(gains: IntArray): List<BandGain> {
-        val tenBandGains = gains.filterIndexed { index, _ -> index % 2 == 0 }
-        return BAND_FREQUENCIES.mapIndexed { index, freq ->
-            BandGain(frequency = freq, gain = tenBandGains.getOrElse(index) { 0 })
+    private fun deserializeGains(gains: IntArray, bandMode: BandMode): List<BandGain> {
+        val frequencies = when (bandMode) {
+            BandMode.TEN_BAND -> BAND_FREQUENCIES_10
+            BandMode.FIFTEEN_BAND -> BAND_FREQUENCIES_15
+            BandMode.TWENTY_BAND -> BAND_FREQUENCIES_20
+        }
+        
+        val indices = when (bandMode) {
+            BandMode.TEN_BAND -> TEN_BAND_INDICES
+            BandMode.FIFTEEN_BAND -> FIFTEEN_BAND_INDICES
+            BandMode.TWENTY_BAND -> (0..19).toList()
+        }
+        
+        return frequencies.mapIndexed { index, freq ->
+            val gainIndex = indices.getOrNull(index) ?: index
+            BandGain(frequency = freq, gain = gains.getOrElse(gainIndex) { 0 })
         }
     }
 
-    private fun deserializeGains(gainsString: String): List<BandGain> {
-        val gains = gainsString.split(",").map { it.toIntOrNull() ?: 0 }
-        val tenBandGains = if (gains.size == 20) {
-            gains.filterIndexed { index, _ -> index % 2 == 0 }
-        } else {
-            gains
-        }
-        return BAND_FREQUENCIES.mapIndexed { index, freq ->
-            BandGain(frequency = freq, gain = tenBandGains.getOrElse(index) { 0 })
-        }
-    }
-
-    private fun serializeGains(bandGains: List<BandGain>): IntArray {
-        val tenBands = bandGains.map { it.gain }
-        return IntArray(20) { index ->
-            if (index % 2 == 1 && index < 19) {
-                (tenBands[(index - 1) / 2] + tenBands[(index + 1) / 2]) / 2
-            } else {
-                tenBands[index / 2]
+    private fun serializeGains(bandGains: List<BandGain>, bandMode: BandMode): IntArray {
+        val result = IntArray(20) { 0 }
+        
+        when (bandMode) {
+            BandMode.TEN_BAND -> {
+                TEN_BAND_INDICES.forEachIndexed { index, targetIndex ->
+                    if (index < bandGains.size) {
+                        result[targetIndex] = bandGains[index].gain
+                    }
+                }
+                for (i in 0 until 19 step 2) {
+                    result[i + 1] = (result[i] + result[i + 2]) / 2
+                }
+            }
+            BandMode.FIFTEEN_BAND -> {
+                FIFTEEN_BAND_INDICES.forEachIndexed { index, targetIndex ->
+                    if (index < bandGains.size) {
+                        result[targetIndex] = bandGains[index].gain
+                    }
+                }
+                val missing = (0..19).filter { it !in FIFTEEN_BAND_INDICES }
+                missing.forEach { idx ->
+                    val prev = FIFTEEN_BAND_INDICES.lastOrNull { it < idx } ?: 0
+                    val next = FIFTEEN_BAND_INDICES.firstOrNull { it > idx } ?: 19
+                    result[idx] = (result[prev] + result[next]) / 2
+                }
+            }
+            BandMode.TWENTY_BAND -> {
+                bandGains.forEachIndexed { index, bandGain ->
+                    if (index < 20) {
+                        result[index] = bandGain.gain
+                    }
+                }
             }
         }
+        
+        return result
     }
 
     companion object {
@@ -446,7 +509,21 @@ class DolbyRepository(private val context: Context) {
             .setUsage(AudioAttributes.USAGE_MEDIA)
             .build()
 
-        val BAND_FREQUENCIES = listOf(32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000)
+        val BAND_FREQUENCIES_10 = listOf(32, 64, 125, 250, 500, 1000, 2250, 5000, 10000, 19688)
+        
+        val BAND_FREQUENCIES_15 = listOf(
+            32, 47, 94, 141, 234, 469, 844, 1313, 2250, 3750, 5813, 9000, 11250, 13875, 19688
+        )
+        
+        val BAND_FREQUENCIES_20 = listOf(
+            32, 47, 141, 234, 328, 469, 656, 844, 1031, 1313,
+            1688, 2250, 3000, 3750, 4688, 5813, 7125, 9000, 11250, 19688
+        )
+        
+        private val TEN_BAND_INDICES = listOf(0, 2, 4, 6, 8, 10, 12, 14, 16, 18)
+        
+        private val FIFTEEN_BAND_INDICES = listOf(0, 1, 2, 3, 4, 5, 6, 8, 11, 12, 14, 15, 17, 18, 19)
+        
         private val BASS_CURVES = listOf(
             floatArrayOf(
                 1.00f, 1.00f, 0.95f, 0.90f, 0.80f, 0.70f, 0.55f, 0.40f, 0.25f, 0.15f,

@@ -37,12 +37,14 @@ class DolbyViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val enabled = repository.getDolbyEnabled()
                 val profile = repository.getCurrentProfile()
+                val bandMode = repository.getBandMode()
                 
                 val settings = DolbySettings(
                     enabled = enabled,
                     currentProfile = profile,
                     bassEnhancerEnabled = repository.getBassEnhancerEnabled(profile),
-                    volumeLevelerEnabled = repository.getVolumeLevelerEnabled(profile)
+                    volumeLevelerEnabled = repository.getVolumeLevelerEnabled(profile),
+                    bandMode = bandMode
                 )
                 
                 val profileSettings = ProfileSettings(

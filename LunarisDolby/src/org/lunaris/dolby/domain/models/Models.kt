@@ -5,6 +5,18 @@
 
 package org.lunaris.dolby.domain.models
 
+enum class BandMode(val value: String, val displayName: String, val bandCount: Int) {
+    TEN_BAND("10", "10 Bands", 10),
+    FIFTEEN_BAND("15", "15 Bands", 15),
+    TWENTY_BAND("20", "20 Bands", 20);
+    
+    companion object {
+        fun fromValue(value: String): BandMode {
+            return values().find { it.value == value } ?: TEN_BAND
+        }
+    }
+}
+
 data class DolbyProfile(
     val id: Int,
     val nameResId: Int
@@ -14,7 +26,8 @@ data class DolbySettings(
     val enabled: Boolean = true,
     val currentProfile: Int = 0,
     val bassEnhancerEnabled: Boolean = false,
-    val volumeLevelerEnabled: Boolean = false
+    val volumeLevelerEnabled: Boolean = false,
+    val bandMode: BandMode = BandMode.TEN_BAND
 )
 
 data class ProfileSettings(
@@ -34,7 +47,8 @@ data class EqualizerPreset(
     val name: String,
     val bandGains: List<BandGain>,
     val isUserDefined: Boolean = false,
-    val isCustom: Boolean = false
+    val isCustom: Boolean = false,
+    val bandMode: BandMode = BandMode.TEN_BAND
 )
 
 data class BandGain(
@@ -58,7 +72,8 @@ sealed class EqualizerUiState {
     data class Success(
         val presets: List<EqualizerPreset>,
         val currentPreset: EqualizerPreset,
-        val bandGains: List<BandGain>
+        val bandGains: List<BandGain>,
+        val bandMode: BandMode
     ) : EqualizerUiState()
     data class Error(val message: String) : EqualizerUiState()
 }
