@@ -472,9 +472,19 @@ private fun ViewModeTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
+    
     Surface(
-        onClick = onClick,
-        modifier = modifier.height(72.dp),
+        onClick = {
+            scope.launch {
+                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
+            }
+            onClick()
+        },
+        modifier = modifier
+            .height(72.dp)
+            .squishable(enabled = true, scaleDown = 0.93f),
         color = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
         else
@@ -604,9 +614,19 @@ private fun BandModeTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
+    
     Surface(
-        onClick = onClick,
-        modifier = modifier.height(80.dp),
+        onClick = {
+            scope.launch {
+                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
+            }
+            onClick()
+        },
+        modifier = modifier
+            .height(80.dp)
+            .squishable(enabled = true, scaleDown = 0.93f),
         color = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
         else
