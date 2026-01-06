@@ -15,8 +15,6 @@ import org.lunaris.dolby.domain.models.BandGain
 import org.lunaris.dolby.domain.models.BandMode
 import org.lunaris.dolby.domain.models.EqualizerPreset
 import java.io.*
-import java.util.zip.GZIPInputStream
-import java.util.zip.GZIPOutputStream
 
 class PresetExportManager(private val context: Context) {
 
@@ -90,10 +88,8 @@ class PresetExportManager(private val context: Context) {
             try {
                 val json = exportPresetToJson(preset)
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    GZIPOutputStream(outputStream).use { gzip ->
-                        BufferedWriter(OutputStreamWriter(gzip, Charsets.UTF_8)).use { writer ->
-                            writer.write(json)
-                        }
+                    BufferedWriter(OutputStreamWriter(outputStream, Charsets.UTF_8)).use { writer ->
+                        writer.write(json)
                     }
                 }
                 Result.success(Unit)
@@ -106,17 +102,8 @@ class PresetExportManager(private val context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val json = context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    try {
-                        GZIPInputStream(inputStream).use { gzip ->
-                            BufferedReader(InputStreamReader(gzip, Charsets.UTF_8)).use { reader ->
-                                reader.readText()
-                            }
-                        }
-                    } catch (e: Exception) {
-                        inputStream.reset()
-                        BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
-                            reader.readText()
-                        }
+                    BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
+                        reader.readText()
                     }
                 } ?: throw IOException("Cannot open file")
                 val preset = importPresetFromJson(json)
@@ -144,10 +131,8 @@ class PresetExportManager(private val context: Context) {
                 put("presets", presetsArray)
             }
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                GZIPOutputStream(outputStream).use { gzip ->
-                    BufferedWriter(OutputStreamWriter(gzip, Charsets.UTF_8)).use { writer ->
-                        writer.write(json.toString(2))
-                    }
+                BufferedWriter(OutputStreamWriter(outputStream, Charsets.UTF_8)).use { writer ->
+                    writer.write(json.toString(2))
                 }
             }
             Result.success(Unit)
@@ -160,17 +145,8 @@ class PresetExportManager(private val context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val json = context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    try {
-                        GZIPInputStream(inputStream).use { gzip ->
-                            BufferedReader(InputStreamReader(gzip, Charsets.UTF_8)).use { reader ->
-                                reader.readText()
-                            }
-                        }
-                    } catch (e: Exception) {
-                        inputStream.reset()
-                        BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
-                            reader.readText()
-                        }
+                    BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
+                        reader.readText()
                     }
                 } ?: throw IOException("Cannot open file")
                 val jsonObject = JSONObject(json)
@@ -196,10 +172,8 @@ class PresetExportManager(private val context: Context) {
                 val file = File(cacheDir, fileName)
                 
                 FileOutputStream(file).use { fos ->
-                    GZIPOutputStream(fos).use { gzip ->
-                        BufferedWriter(OutputStreamWriter(gzip, Charsets.UTF_8)).use { writer ->
-                            writer.write(json)
-                        }
+                    BufferedWriter(OutputStreamWriter(fos, Charsets.UTF_8)).use { writer ->
+                        writer.write(json)
                     }
                 }
                 val uri = androidx.core.content.FileProvider.getUriForFile(
