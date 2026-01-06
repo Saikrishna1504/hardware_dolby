@@ -100,9 +100,30 @@ fun DolbyMainCard(
                             }
                             onEnabledChange(it)
                         },
+                        thumbContent = {
+                            Crossfade(targetState = enabled, label = "switch_icon") { isChecked ->
+                                if (isChecked) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Close,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                            checkedIconColor = MaterialTheme.colorScheme.onPrimary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                 }
@@ -239,7 +260,32 @@ fun ModernSettingSwitch(
                         haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
                     }
                     onCheckedChange(it)
-                }
+                },
+                thumbContent = {
+                    Crossfade(targetState = checked, label = "switch_icon") { isChecked ->
+                        if (isChecked) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                    checkedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
         }
     }

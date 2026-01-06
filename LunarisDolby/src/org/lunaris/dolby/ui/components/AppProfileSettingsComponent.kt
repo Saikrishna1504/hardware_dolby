@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -106,7 +107,32 @@ fun AppProfileSettingsCard(
                                 AppProfileMonitorService.stopMonitoring(context)
                             }
                         }
-                    }
+                    },
+                    thumbContent = {
+                        Crossfade(targetState = isEnabled, label = "switch_icon") { isChecked ->
+                            if (isChecked) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                        checkedIconColor = MaterialTheme.colorScheme.onPrimary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
             }
             
@@ -129,7 +155,32 @@ fun AppProfileSettingsCard(
                             onCheckedChange = { show ->
                                 showToasts = show
                                 prefs.edit().putBoolean("app_profile_show_toasts", show).apply()
-                            }
+                            },
+                            thumbContent = {
+                                Crossfade(targetState = showToasts, label = "switch_icon") { isChecked ->
+                                    if (isChecked) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Filled.Close,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                                checkedIconColor = MaterialTheme.colorScheme.onPrimary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
                     }
                 }
