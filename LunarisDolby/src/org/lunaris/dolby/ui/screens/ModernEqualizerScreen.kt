@@ -24,12 +24,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +62,9 @@ fun ModernEqualizerScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var viewMode by remember { mutableStateOf(EqualizerViewMode.CURVE) }
     val currentRoute by navController.currentBackStackEntryFlow.collectAsState(null)
+    
+    val context = LocalContext.current
+    val backgroundColor = Color(context.getColor(R.color.screen_background))
 
     Scaffold(
         topBar = {
@@ -91,7 +96,7 @@ fun ModernEqualizerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.Transparent
                 )
             )
         },
@@ -108,13 +113,15 @@ fun ModernEqualizerScreen(
                     }
                 }
             )
-        }
+        },
+        containerColor = backgroundColor
     ) { paddingValues ->
         when (val state = uiState) {
             is EqualizerUiState.Loading -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
@@ -127,6 +134,7 @@ fun ModernEqualizerScreen(
                     viewModel = viewModel,
                     viewMode = viewMode,
                     onViewModeChange = { viewMode = it },
+                    backgroundColor = backgroundColor,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -134,6 +142,7 @@ fun ModernEqualizerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
@@ -205,6 +214,7 @@ private fun ModernEqualizerContent(
     viewModel: EqualizerViewModel,
     viewMode: EqualizerViewMode,
     onViewModeChange: (EqualizerViewMode) -> Unit,
+    backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
     val isFlatPreset = state.currentPreset.name == stringResource(R.string.dolby_preset_default)
@@ -214,6 +224,7 @@ private fun ModernEqualizerContent(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(backgroundColor)
             .verticalScroll(scrollState)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)

@@ -6,6 +6,7 @@
 package org.lunaris.dolby.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -14,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,6 +34,9 @@ fun ModernDolbySettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
     val currentRoute by navController.currentBackStackEntryFlow.collectAsState(null)
+    
+    val context = LocalContext.current
+    val backgroundColor = Color(context.getColor(R.color.screen_background))
 
     Scaffold(
         topBar = {
@@ -52,7 +58,7 @@ fun ModernDolbySettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.Transparent
                 )
             )
         },
@@ -71,13 +77,15 @@ fun ModernDolbySettingsScreen(
                     }
                 )
             }
-        }
+        },
+        containerColor = backgroundColor
     ) { paddingValues ->
         when (val state = uiState) {
             is DolbyUiState.Loading -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
@@ -98,6 +106,7 @@ fun ModernDolbySettingsScreen(
                 ModernDolbySettingsContent(
                     state = state,
                     viewModel = viewModel,
+                    backgroundColor = backgroundColor,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -105,6 +114,7 @@ fun ModernDolbySettingsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
@@ -147,10 +157,13 @@ fun ModernDolbySettingsScreen(
 private fun ModernDolbySettingsContent(
     state: DolbyUiState.Success,
     viewModel: org.lunaris.dolby.ui.viewmodel.DolbyViewModel,
+    backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .background(backgroundColor),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
