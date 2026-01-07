@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import org.lunaris.dolby.R
 import org.lunaris.dolby.data.DolbyRepository
 import org.lunaris.dolby.domain.models.*
+import org.lunaris.dolby.utils.ToastHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -168,10 +169,34 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun canEditCurrentPreset(): Boolean {
+        val state = _uiState.value
+        if (state is EqualizerUiState.Success) {
+            return state.currentPreset.bandMode == currentBandMode
+        }
+        return false
+    }
+
+    fun getCurrentPresetBandMode(): BandMode? {
+        val state = _uiState.value
+        if (state is EqualizerUiState.Success) {
+            return state.currentPreset.bandMode
+        }
+        return null
+    }
+
     fun setBandGain(index: Int, gain: Int) {
         viewModelScope.launch {
             val state = _uiState.value
             if (state is EqualizerUiState.Success) {
+                if (state.currentPreset.bandMode != currentBandMode) {
+                    ToastHelper.showToast(
+                        context,
+                        "Cannot edit ${state.currentPreset.bandMode.displayName} preset in ${currentBandMode.displayName} mode. " +
+                        "Switch to ${state.currentPreset.bandMode.displayName} or select a different preset."
+                    )
+                    return@launch
+                }
                 val newBandGains = state.bandGains.toMutableList()
                 newBandGains[index] = newBandGains[index].copy(gain = gain)
                 repository.setEqualizerGains(currentProfile, newBandGains, currentBandMode)

@@ -220,6 +220,8 @@ private fun ModernEqualizerContent(
     val isFlatPreset = state.currentPreset.name == stringResource(R.string.dolby_preset_default)
     val isActive = !isFlatPreset
     val scrollState = rememberScrollState()
+    val isBandModeCompatible = state.currentPreset.bandMode == state.bandMode
+    val canEdit = isBandModeCompatible && isActive
     
     Column(
         modifier = modifier
@@ -247,6 +249,46 @@ private fun ModernEqualizerContent(
             currentMode = state.bandMode,
             onModeChange = { viewModel.setBandMode(it) }
         )
+        
+        if (!isBandModeCompatible) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Band Mode Mismatch",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "This ${state.currentPreset.bandMode.displayName} preset cannot be edited in ${state.bandMode.displayName} mode. " +
+                                  "Switch to ${state.currentPreset.bandMode.displayName} or select a compatible preset.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+        }
         
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -327,35 +369,46 @@ private fun ModernEqualizerContent(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Interactive Frequency Response",
+                                    text = if (canEdit) "Interactive Frequency Response" 
+                                          else "Frequency Response (Read-only)",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
+                                    color = if (canEdit) MaterialTheme.colorScheme.onSurface
+                                          else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                    color = if (canEdit) MaterialTheme.colorScheme.secondaryContainer
+                                          else MaterialTheme.colorScheme.errorContainer
                                 ) {
                                     Text(
-                                        text = "${state.bandMode.bandCount} bands",
+                                        text = "${state.currentPreset.bandMode.bandCount} bands",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        color = if (canEdit) MaterialTheme.colorScheme.onSecondaryContainer
+                                              else MaterialTheme.colorScheme.onErrorContainer,
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                     )
                                 }
                             }
                             Text(
-                                text = "Drag the control points to adjust gain (±15 dB) • ${getFrequencyRange(state.bandMode)}",
+                                text = if (canEdit) 
+                                    "Drag the control points to adjust gain (±15 dB) • ${getFrequencyRange(state.bandMode)}"
+                                else
+                                    "Read-only view • Band mode mismatch",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (canEdit) MaterialTheme.colorScheme.onSurfaceVariant
+                                      else MaterialTheme.colorScheme.error,
                                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                             )
                             InteractiveFrequencyResponseCurve(
                                 bandGains = state.bandGains,
                                 onBandGainChange = { index, newGain ->
-                                    viewModel.setBandGain(index, newGain)
+                                    if (canEdit) {
+                                        viewModel.setBandGain(index, newGain)
+                                    }
                                 },
-                                isActive = isActive,
+                                isActive = canEdit,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f)
@@ -424,9 +477,12 @@ private fun ModernEqualizerContent(
                                     .padding(20.dp)
                             ) {
                                 Text(
-                                    text = stringResource(R.string.dolby_geq_slider_label_gain),
+                                    text = if (canEdit) stringResource(R.string.dolby_geq_slider_label_gain)
+                                          else "${stringResource(R.string.dolby_geq_slider_label_gain)} (Read-only)",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
+                                    color = if (canEdit) MaterialTheme.colorScheme.onSurface
+                                          else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(bottom = 16.dp)
                                 )
                                 
@@ -439,8 +495,11 @@ private fun ModernEqualizerContent(
                                             frequency = bandGain.frequency,
                                             gain = bandGain.gain,
                                             onGainChange = { newGain ->
-                                                viewModel.setBandGain(index, newGain)
-                                            }
+                                                if (canEdit) {
+                                                    viewModel.setBandGain(index, newGain)
+                                                }
+                                            },
+                                            enabled = canEdit
                                         )
                                     }
                                 }
@@ -805,7 +864,8 @@ fun ModernEqualizerBand(
     frequency: Int,
     gain: Int,
     onGainChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     var sliderValue by remember(gain) { mutableFloatStateOf(gain / 10f) }
     val haptic = rememberHapticFeedback()
@@ -821,31 +881,38 @@ fun ModernEqualizerBand(
     ) {
         Surface(
             shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.primaryContainer
+            color = if (enabled) MaterialTheme.colorScheme.primaryContainer
+                   else MaterialTheme.colorScheme.surfaceVariant
         ) {
             Text(
                 text = "%.1f".format(sliderValue),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer
+                       else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }
         Slider(
             value = sliderValue,
             onValueChange = { newValue ->
-                val intValue = (newValue * 10).toInt() / 10
-                if (intValue != lastHapticValue) {
-                    scope.launch {
-                        haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.TEXTURE_TICK)
+                if (enabled) {
+                    val intValue = (newValue * 10).toInt() / 10
+                    if (intValue != lastHapticValue) {
+                        scope.launch {
+                            haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.TEXTURE_TICK)
+                        }
+                        lastHapticValue = intValue
                     }
-                    lastHapticValue = intValue
+                    sliderValue = newValue
                 }
-                sliderValue = newValue
             },
             onValueChangeFinished = {
-                onGainChange((sliderValue * 10).toInt())
+                if (enabled) {
+                    onGainChange((sliderValue * 10).toInt())
+                }
             },
+            enabled = enabled,
             valueRange = -15f..15f,
             modifier = Modifier
                 .graphicsLayer {
@@ -868,15 +935,21 @@ fun ModernEqualizerBand(
                 .weight(1f)
                 .width(48.dp),
             colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                thumbColor = if (enabled) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outline,
+                activeTrackColor = if (enabled) MaterialTheme.colorScheme.primary
+                                  else MaterialTheme.colorScheme.outline,
+                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                disabledThumbColor = MaterialTheme.colorScheme.outline,
+                disabledActiveTrackColor = MaterialTheme.colorScheme.outline
             )
         )
         Text(
             text = if (frequency >= 1000) "${frequency / 1000}k" else "$frequency",
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+                   else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

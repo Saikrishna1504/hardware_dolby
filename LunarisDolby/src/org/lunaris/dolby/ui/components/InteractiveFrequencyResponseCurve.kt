@@ -42,6 +42,7 @@ fun InteractiveFrequencyResponseCurve(
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
     val secondaryColor = MaterialTheme.colorScheme.secondary
     val primaryContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val errorColor = MaterialTheme.colorScheme.error
     
     val backgroundColor = if (isActive) {
         primaryContainerColor.copy(alpha = 0.6f)
@@ -52,10 +53,10 @@ fun InteractiveFrequencyResponseCurve(
     val borderColor = if (isActive) {
         primaryColor
     } else {
-        Color.Transparent
+        errorColor.copy(alpha = 0.5f)
     }
     
-    val borderWidth = if (isActive) 2.dp else 0.dp
+    val borderWidth = if (isActive) 2.dp else 1.dp
     
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var controlPoints by remember { mutableStateOf(bandGains.map { it.gain }) }
@@ -77,62 +78,64 @@ fun InteractiveFrequencyResponseCurve(
                     color = borderColor,
                     shape = RoundedCornerShape(16.dp)
                 )
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            val width = size.width
-                            val height = size.height
-                            val stepX = width / (bandGains.size - 1).toFloat()
-                            
-                            var closestIndex = -1
-                            var closestDistance = Float.MAX_VALUE
-                            
-                            bandGains.forEachIndexed { index, _ ->
-                                val x = index * stepX
-                                val normalizedGain = (controlPoints[index] / 150f).coerceIn(-1f, 1f)
-                                val y = height / 2 - (normalizedGain * height / 2 * 0.85f)
-                                
-                                val distance = kotlin.math.sqrt(
-                                    (offset.x - x) * (offset.x - x) + 
-                                    (offset.y - y) * (offset.y - y)
-                                )
-                                
-                                if (distance < closestDistance && distance < 120f) {
-                                    closestDistance = distance
-                                    closestIndex = index
-                                }
-                            }
-                            
-                            if (closestIndex != -1) {
-                                draggedIndex = closestIndex
-                            }
-                        },
-                        onDrag = { change, _ ->
-                            draggedIndex?.let { index ->
+                .pointerInput(isActive) {
+                    if (isActive) {
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val width = size.width
                                 val height = size.height
-                                val centerY = height / 2
-                                val y = change.position.y
-                                val normalizedGain = ((centerY - y) / (height / 2 * 0.85f)).coerceIn(-1f, 1f)
-                                val newGain = (normalizedGain * 150).toInt().coerceIn(-150, 150)
+                                val stepX = width / (bandGains.size - 1).toFloat()
                                 
-                                if (controlPoints[index] != newGain) {
-                                    controlPoints = controlPoints.toMutableList().apply {
-                                        this[index] = newGain
+                                var closestIndex = -1
+                                var closestDistance = Float.MAX_VALUE
+                                
+                                bandGains.forEachIndexed { index, _ ->
+                                    val x = index * stepX
+                                    val normalizedGain = (controlPoints[index] / 150f).coerceIn(-1f, 1f)
+                                    val y = height / 2 - (normalizedGain * height / 2 * 0.85f)
+                                    
+                                    val distance = kotlin.math.sqrt(
+                                        (offset.x - x) * (offset.x - x) + 
+                                        (offset.y - y) * (offset.y - y)
+                                    )
+                                    
+                                    if (distance < closestDistance && distance < 120f) {
+                                        closestDistance = distance
+                                        closestIndex = index
                                     }
                                 }
-                                change.consume()
+                                
+                                if (closestIndex != -1) {
+                                    draggedIndex = closestIndex
+                                }
+                            },
+                            onDrag = { change, _ ->
+                                draggedIndex?.let { index ->
+                                    val height = size.height
+                                    val centerY = height / 2
+                                    val y = change.position.y
+                                    val normalizedGain = ((centerY - y) / (height / 2 * 0.85f)).coerceIn(-1f, 1f)
+                                    val newGain = (normalizedGain * 150).toInt().coerceIn(-150, 150)
+                                    
+                                    if (controlPoints[index] != newGain) {
+                                        controlPoints = controlPoints.toMutableList().apply {
+                                            this[index] = newGain
+                                        }
+                                    }
+                                    change.consume()
+                                }
+                            },
+                            onDragEnd = {
+                                draggedIndex?.let { index ->
+                                    onBandGainChange(index, controlPoints[index])
+                                }
+                                draggedIndex = null
+                            },
+                            onDragCancel = {
+                                draggedIndex = null
                             }
-                        },
-                        onDragEnd = {
-                            draggedIndex?.let { index ->
-                                onBandGainChange(index, controlPoints[index])
-                            }
-                            draggedIndex = null
-                        },
-                        onDragCancel = {
-                            draggedIndex = null
-                        }
-                    )
+                        )
+                    }
                 }
         ) {
             val width = size.width
