@@ -8,6 +8,7 @@ package org.lunaris.dolby.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import org.lunaris.dolby.DolbyConstants
 import org.lunaris.dolby.R
 import org.lunaris.dolby.data.DolbyRepository
 import org.lunaris.dolby.domain.models.*
@@ -150,20 +151,30 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
             BandMode.TWENTY_BAND -> DolbyRepository.BAND_FREQUENCIES_20
         }
         
+        if (preset.bandGains.size != sourceFreqs.size) {
+            DolbyConstants.dlog("EqualizerViewModel", 
+                "Preset band count mismatch: expected ${sourceFreqs.size}, got ${preset.bandGains.size}")
+            return targetFreqs.map { BandGain(frequency = it, gain = 0) }
+        }
+
         return targetFreqs.map { targetFreq ->
             val closestIdx = sourceFreqs.indexOfFirst { it >= targetFreq }
-            val gain = if (closestIdx == -1) {
-                preset.bandGains.lastOrNull()?.gain ?: 0
-            } else if (closestIdx == 0) {
-                preset.bandGains.firstOrNull()?.gain ?: 0
-            } else {
-                val prevFreq = sourceFreqs[closestIdx - 1]
-                val nextFreq = sourceFreqs[closestIdx]
-                val prevGain = preset.bandGains[closestIdx - 1].gain
-                val nextGain = preset.bandGains[closestIdx].gain
-                
-                val ratio = (targetFreq - prevFreq).toFloat() / (nextFreq - prevFreq)
-                (prevGain + ratio * (nextGain - prevGain)).toInt()
+            val gain = when {
+                closestIdx == -1 -> {
+                    preset.bandGains.lastOrNull()?.gain ?: 0
+                }
+                closestIdx == 0 -> {
+                    preset.bandGains.firstOrNull()?.gain ?: 0
+                }
+                else -> {
+                    val prevFreq = sourceFreqs[closestIdx - 1]
+                    val nextFreq = sourceFreqs[closestIdx]
+                    val prevGain = preset.bandGains.getOrNull(closestIdx - 1)?.gain ?: 0
+                    val nextGain = preset.bandGains.getOrNull(closestIdx)?.gain ?: 0
+                    
+                    val ratio = (targetFreq - prevFreq).toFloat() / (nextFreq - prevFreq)
+                    (prevGain + ratio * (nextGain - prevGain)).toInt()
+                }
             }
             BandGain(frequency = targetFreq, gain = gain)
         }
@@ -189,7 +200,8 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             val state = _uiState.value
             if (state is EqualizerUiState.Success) {
-                if (state.currentPreset.bandMode != currentBandMode) {
+                val isFlatPreset = state.currentPreset.name == context.getString(R.string.dolby_preset_default)
+                if (!isFlatPreset && state.currentPreset.bandMode != currentBandMode) {
                     ToastHelper.showToast(
                         context,
                         "Cannot edit ${state.currentPreset.bandMode.displayName} preset in ${currentBandMode.displayName} mode. " +

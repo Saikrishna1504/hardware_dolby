@@ -468,25 +468,36 @@ class DolbyRepository(private val context: Context) {
         when (bandMode) {
             BandMode.TEN_BAND -> {
                 TEN_BAND_INDICES.forEachIndexed { index, targetIndex ->
-                    if (index < bandGains.size) {
+                    if (index < bandGains.size && targetIndex < 20) {
                         result[targetIndex] = bandGains[index].gain
                     }
                 }
                 for (i in 0 until 19 step 2) {
-                    result[i + 1] = (result[i] + result[i + 2]) / 2
-                }
+                    if (i + 2 < 20) {
+                        result[i + 1] = (result[i] + result[i + 2]) / 2
+                    }
+                }   
+                result[19] = result[18]
             }
             BandMode.FIFTEEN_BAND -> {
                 FIFTEEN_BAND_INDICES.forEachIndexed { index, targetIndex ->
-                    if (index < bandGains.size) {
+                    if (index < bandGains.size && targetIndex < 20) {
                         result[targetIndex] = bandGains[index].gain
                     }
                 }
                 val missing = (0..19).filter { it !in FIFTEEN_BAND_INDICES }
                 missing.forEach { idx ->
-                    val prev = FIFTEEN_BAND_INDICES.lastOrNull { it < idx } ?: 0
-                    val next = FIFTEEN_BAND_INDICES.firstOrNull { it > idx } ?: 19
-                    result[idx] = (result[prev] + result[next]) / 2
+                    val prev = FIFTEEN_BAND_INDICES.filter { it < idx }.maxOrNull() ?: 0
+                    val next = FIFTEEN_BAND_INDICES.filter { it > idx }.minOrNull() ?: 19
+                    
+                    if (prev < idx && next > idx && prev < 20 && next < 20) {
+                        val prevValue = result[prev]
+                        val nextValue = result[next]
+                        val ratio = (idx - prev).toFloat() / (next - prev)
+                        result[idx] = (prevValue + ratio * (nextValue - prevValue)).toInt()
+                    } else if (prev < 20) {
+                        result[idx] = result[prev]
+                    }
                 }
             }
             BandMode.TWENTY_BAND -> {

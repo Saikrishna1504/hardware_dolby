@@ -218,10 +218,10 @@ private fun ModernEqualizerContent(
     modifier: Modifier = Modifier
 ) {
     val isFlatPreset = state.currentPreset.name == stringResource(R.string.dolby_preset_default)
-    val isActive = !isFlatPreset
     val scrollState = rememberScrollState()
     val isBandModeCompatible = state.currentPreset.bandMode == state.bandMode
-    val canEdit = isBandModeCompatible && isActive
+    val canEdit = isBandModeCompatible || isFlatPreset
+    val isActive = canEdit && !isFlatPreset
     
     Column(
         modifier = modifier
@@ -250,7 +250,7 @@ private fun ModernEqualizerContent(
             onModeChange = { viewModel.setBandMode(it) }
         )
         
-        if (!isBandModeCompatible) {
+        if (!isBandModeCompatible && !isFlatPreset) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
@@ -382,7 +382,7 @@ private fun ModernEqualizerContent(
                                           else MaterialTheme.colorScheme.errorContainer
                                 ) {
                                     Text(
-                                        text = "${state.currentPreset.bandMode.bandCount} bands",
+                                        text = "${state.bandMode.bandCount} bands",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = if (canEdit) MaterialTheme.colorScheme.onSecondaryContainer
@@ -408,7 +408,8 @@ private fun ModernEqualizerContent(
                                         viewModel.setBandGain(index, newGain)
                                     }
                                 },
-                                isActive = canEdit,
+                                isActive = isActive,
+                                isEditable = canEdit,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f)

@@ -35,7 +35,8 @@ fun InteractiveFrequencyResponseCurve(
     bandGains: List<BandGain>,
     onBandGainChange: (index: Int, newGain: Int) -> Unit,
     modifier: Modifier = Modifier,
-    isActive: Boolean = false
+    isActive: Boolean = false,
+    isEditable: Boolean = true
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
@@ -52,11 +53,13 @@ fun InteractiveFrequencyResponseCurve(
     
     val borderColor = if (isActive) {
         primaryColor
-    } else {
+    } else if (!isEditable) {
         errorColor.copy(alpha = 0.5f)
+    } else {
+        Color.Transparent
     }
     
-    val borderWidth = if (isActive) 2.dp else 1.dp
+    val borderWidth = if (isActive) 2.dp else if (!isEditable) 1.dp else 0.dp
     
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var controlPoints by remember { mutableStateOf(bandGains.map { it.gain }) }
@@ -78,8 +81,8 @@ fun InteractiveFrequencyResponseCurve(
                     color = borderColor,
                     shape = RoundedCornerShape(16.dp)
                 )
-                .pointerInput(isActive) {
-                    if (isActive) {
+                .pointerInput(isEditable) {
+                    if (isEditable) {
                         detectDragGestures(
                             onDragStart = { offset ->
                                 val width = size.width
