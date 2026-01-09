@@ -5,7 +5,6 @@
 
 package org.lunaris.dolby.service
 
-import android.app.ActivityManager
 import android.app.Service
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
@@ -20,6 +19,7 @@ import org.lunaris.dolby.R
 import org.lunaris.dolby.data.AppProfileManager
 import org.lunaris.dolby.data.DolbyRepository
 import org.lunaris.dolby.utils.ToastHelper
+import java.util.concurrent.atomic.AtomicReference
 
 class AppProfileMonitorService : Service() {
 
@@ -27,7 +27,7 @@ class AppProfileMonitorService : Service() {
     private val switchHandler = Handler(Looper.getMainLooper())
     private lateinit var appProfileManager: AppProfileManager
     private lateinit var dolbyRepository: DolbyRepository
-    private var lastPackageName: String? = null
+    private val lastPackageName = AtomicReference<String?>(null)
     private var originalProfile: Int = -1
     private var isMonitoring = false
     private var pendingSwitchRunnable: Runnable? = null
@@ -69,8 +69,10 @@ class AppProfileMonitorService : Service() {
             isMonitoring = false
             handler.removeCallbacks(checkForegroundAppRunnable)
             
-            pendingSwitchRunnable?.let { switchHandler.removeCallbacks(it) }
-            pendingSwitchRunnable = null
+            synchronized(this) {
+                pendingSwitchRunnable?.let { switchHandler.removeCallbacks(it) }
+                pendingSwitchRunnable = null
+            }
             
             if (originalProfile >= 0) {
                 dolbyRepository.setCurrentProfile(originalProfile)
@@ -84,43 +86,49 @@ class AppProfileMonitorService : Service() {
         try {
             val packageName = getForegroundPackage() ?: return
             
-            if (packageName == lastPackageName) {
+            val previousPackage = lastPackageName.getAndSet(packageName)
+            if (packageName == previousPackage) {
                 return
             }
             
-            lastPackageName = packageName
+            DolbyConstants.dlog(TAG, "Foreground app changed: $previousPackage -> $packageName")
             
-            pendingSwitchRunnable?.let { switchHandler.removeCallbacks(it) }
-            
-            pendingSwitchRunnable = Runnable {
-                try {
-                    val assignedProfile = appProfileManager.getAppProfile(packageName)
-                    val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
-                    val showToasts = prefs.getBoolean("app_profile_show_toasts", true)
-                    
-                    if (assignedProfile >= 0) {
-                        DolbyConstants.dlog(TAG, "Switching to profile $assignedProfile for $packageName")
-                        dolbyRepository.setCurrentProfile(assignedProfile)
-                        
-                        if (showToasts) {
-                            val profileName = getProfileName(assignedProfile)
-                            val appName = getAppName(packageName)
-                            ToastHelper.showToast(
-                                this@AppProfileMonitorService,
-                                "Dolby: $profileName ($appName)"
-                            )
+            synchronized(this) {
+                pendingSwitchRunnable?.let { switchHandler.removeCallbacks(it) }
+                
+                pendingSwitchRunnable = Runnable {
+                    synchronized(this) {
+                        try {
+                            val assignedProfile = appProfileManager.getAppProfile(packageName)
+                            val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+                            val showToasts = prefs.getBoolean("app_profile_show_toasts", true)
+                            
+                            if (assignedProfile >= 0) {
+                                DolbyConstants.dlog(TAG, "Switching to profile $assignedProfile for $packageName")
+                                dolbyRepository.setCurrentProfile(assignedProfile)
+                                
+                                if (showToasts) {
+                                    val profileName = getProfileName(assignedProfile)
+                                    val appName = getAppName(packageName)
+                                    ToastHelper.showToast(
+                                        this@AppProfileMonitorService,
+                                        "Dolby: $profileName ($appName)"
+                                    )
+                                }
+                            } else if (originalProfile >= 0) {
+                                DolbyConstants.dlog(TAG, "Restoring original profile $originalProfile for $packageName")
+                                dolbyRepository.setCurrentProfile(originalProfile)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error switching profile", e)
+                        } finally {
+                            pendingSwitchRunnable = null
                         }
-                    } else if (originalProfile >= 0) {
-                        DolbyConstants.dlog(TAG, "Restoring original profile $originalProfile for $packageName")
-                        dolbyRepository.setCurrentProfile(originalProfile)
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error switching profile", e)
                 }
-                pendingSwitchRunnable = null
+                
+                switchHandler.postDelayed(pendingSwitchRunnable!!, SWITCH_DELAY)
             }
-            
-            switchHandler.postDelayed(pendingSwitchRunnable!!, SWITCH_DELAY)
             
         } catch (e: Exception) {
             Log.e(TAG, "Error checking foreground app", e)
@@ -172,6 +180,7 @@ class AppProfileMonitorService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         stopMonitoring()
+        dolbyRepository.close()
     }
 
     companion object {

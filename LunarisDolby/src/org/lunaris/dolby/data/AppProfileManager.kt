@@ -6,7 +6,7 @@
 package org.lunaris.dolby.data
 
 import android.content.Context
-import android.content.pm.ApplicationInfo
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import kotlinx.coroutines.Dispatchers
@@ -25,21 +25,29 @@ class AppProfileManager(private val context: Context) {
     private val packageManager = context.packageManager
     
     suspend fun getInstalledApps(): List<AppInfo> = withContext(Dispatchers.IO) {
-        val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-            .filter { app ->
-                packageManager.getLaunchIntentForPackage(app.packageName) != null
+        try {
+            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            .map { app ->
-                AppInfo(
-                    packageName = app.packageName,
-                    appName = app.loadLabel(packageManager).toString(),
-                    icon = app.loadIcon(packageManager),
-                    assignedProfile = getAppProfile(app.packageName)
-                )
-            }
-            .sortedBy { it.appName }
-        
-        apps
+            
+            val resolveInfos = packageManager.queryIntentActivities(mainIntent, 0)
+            val assignedProfiles = getAppsWithProfiles()
+            
+            resolveInfos
+                .distinctBy { it.activityInfo.packageName }
+                .map { resolveInfo ->
+                    val packageName = resolveInfo.activityInfo.packageName
+                    AppInfo(
+                        packageName = packageName,
+                        appName = resolveInfo.loadLabel(packageManager).toString(),
+                        icon = resolveInfo.loadIcon(packageManager),
+                        assignedProfile = assignedProfiles[packageName] ?: -1
+                    )
+                }
+                .sortedBy { it.appName }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
     
     fun getAppProfile(packageName: String): Int {

@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class DolbyRepository(private val context: Context) {
+class DolbyRepository(private val context: Context) : AutoCloseable {
 
     private val audioManager = context.getSystemService(AudioManager::class.java)
     private var dolbyEffect = createDolbyEffect()
@@ -30,13 +30,16 @@ class DolbyRepository(private val context: Context) {
     private val _isOnSpeaker = MutableStateFlow(checkIsOnSpeaker())
     val isOnSpeaker: StateFlow<Boolean> = _isOnSpeaker.asStateFlow()
     
-    private val _profileChanged = MutableStateFlow(0)
-    val profileChanged: StateFlow<Int> = _profileChanged.asStateFlow()
+    private val _currentProfile = MutableStateFlow(0)
+    val currentProfile: StateFlow<Int> = _currentProfile.asStateFlow()
 
     val stereoWideningSupported = context.resources.getBoolean(R.bool.dolby_stereo_widening_supported)
     val volumeLevelerSupported = context.resources.getBoolean(R.bool.dolby_volume_leveler_supported)
     
     private var isReleased = false
+    
+    private var cachedPresets: List<EqualizerPreset>? = null
+    private val presetCacheLock = Any()
 
     private fun createDolbyEffect(): DolbyAudioEffect {
         return try {
@@ -118,7 +121,7 @@ class DolbyRepository(private val context: Context) {
             dolbyEffect.profile = profile
             defaultPrefs.edit().putString(DolbyConstants.PREF_PROFILE, profile.toString()).apply()
             restoreProfilePreset(profile)
-            _profileChanged.value = _profileChanged.value + 1
+            _currentProfile.value = profile
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error setting current profile: ${e.message}")
         }
@@ -213,12 +216,13 @@ class DolbyRepository(private val context: Context) {
             prefs.edit().putString(DolbyConstants.PREF_PRESET, gainsString).apply()
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error setting bass curve: ${e.message}")
+            throw e
         }
     }
 
     private fun applyBassCurve(gains: IntArray, level: Int, curve: Int, direction: Int) {
         val weights = BASS_CURVES.getOrElse(curve) { BASS_CURVES[0] }
-        val baseGain = level * 1.4f
+        val baseGain = level * BASS_GAIN_MULTIPLIER
         for (i in weights.indices) {
             if (i >= gains.size) break
             val weightedGain = (baseGain * weights[i] * direction).toInt()
@@ -230,6 +234,11 @@ class DolbyRepository(private val context: Context) {
         if (isReleased) return
         
         DolbyConstants.dlog(TAG, "setBassLevel: profile=$profile level=$level")
+
+        if (level !in 0..100) {
+            DolbyConstants.dlog(TAG, "setBassLevel: invalid level $level")
+            throw IllegalArgumentException("Bass level must be between 0 and 100")
+        }
         
         try {
             val prefs = getProfilePrefs(profile)
@@ -257,10 +266,14 @@ class DolbyRepository(private val context: Context) {
             prefs.edit().putString(DolbyConstants.PREF_PRESET, gainsString).apply()
             
             DolbyConstants.dlog(TAG, "setBassLevel: success")
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "setBassLevel: error - ${e.message}")
+        } catch (e: IllegalArgumentException) {
+            DolbyConstants.dlog(TAG, "setBassLevel: validation error - ${e.message}")
             val prefs = getProfilePrefs(profile)
             prefs.edit().putInt(DolbyConstants.PREF_BASS_LEVEL, 0).apply()
+            throw e
+        } catch (e: Exception) {
+            DolbyConstants.dlog(TAG, "setBassLevel: unexpected error - ${e.message}")
+            throw e
         }
     }
 
@@ -283,6 +296,11 @@ class DolbyRepository(private val context: Context) {
         
         DolbyConstants.dlog(TAG, "setTrebleLevel: profile=$profile level=$level")
 
+        if (level !in 0..100) {
+            DolbyConstants.dlog(TAG, "setTrebleLevel: invalid level $level")
+            throw IllegalArgumentException("Treble level must be between 0 and 100")
+        }
+
         try {
             val prefs = getProfilePrefs(profile)
             val previousLevel = prefs.getInt(DolbyConstants.PREF_TREBLE_LEVEL, 0)
@@ -295,7 +313,7 @@ class DolbyRepository(private val context: Context) {
             val modifiedGains = currentGains.copyOf()
 
             if (previousLevel > 0) {
-                val previousGain = (previousLevel * 1.5f).toInt()
+                val previousGain = (previousLevel * TREBLE_GAIN_MULTIPLIER).toInt()
                 for (i in 14..19) {
                     if (i < modifiedGains.size) {
                         modifiedGains[i] = (modifiedGains[i] - previousGain).coerceIn(-150, 150)
@@ -304,7 +322,7 @@ class DolbyRepository(private val context: Context) {
             }
 
             if (level > 0) {
-                val trebleGain = (level * 1.5f).toInt()
+                val trebleGain = (level * TREBLE_GAIN_MULTIPLIER).toInt()
                 for (i in 14..19) {
                     if (i < modifiedGains.size) {
                         modifiedGains[i] = (modifiedGains[i] + trebleGain).coerceIn(-150, 150)
@@ -318,10 +336,14 @@ class DolbyRepository(private val context: Context) {
             prefs.edit().putString(DolbyConstants.PREF_PRESET, gainsString).apply()
             
             DolbyConstants.dlog(TAG, "setTrebleLevel: success")
-        } catch (e: Exception) {
-            DolbyConstants.dlog(TAG, "setTrebleLevel: error - ${e.message}")
+        } catch (e: IllegalArgumentException) {
+            DolbyConstants.dlog(TAG, "setTrebleLevel: validation error - ${e.message}")
             val prefs = getProfilePrefs(profile)
             prefs.edit().putInt(DolbyConstants.PREF_TREBLE_LEVEL, 0).apply()
+            throw e
+        } catch (e: Exception) {
+            DolbyConstants.dlog(TAG, "setTrebleLevel: unexpected error - ${e.message}")
+            throw e
         }
     }
 
@@ -558,33 +580,49 @@ class DolbyRepository(private val context: Context) {
     }
 
     fun getUserPresets(): List<EqualizerPreset> {
-        val bandMode = getBandMode()
-        return presetsPrefs.all.mapNotNull { (name, value) ->
-            try {
-                val valueStr = value.toString()
-                if (valueStr.contains("|")) {
-                    val parts = valueStr.split("|")
-                    val presetBandMode = BandMode.fromValue(parts[1])
-                    val gains = parts[0].split(",").map { it.toInt() }.toIntArray()
-                    EqualizerPreset(
-                        name = name,
-                        bandGains = deserializeGains(gains, presetBandMode),
-                        isUserDefined = true,
-                        bandMode = presetBandMode
-                    )
-                } else {
-                    val gains = valueStr.split(",").map { it.toInt() }.toIntArray()
-                    EqualizerPreset(
-                        name = name,
-                        bandGains = deserializeGains(gains, BandMode.TEN_BAND),
-                        isUserDefined = true,
-                        bandMode = BandMode.TEN_BAND
-                    )
+        synchronized(presetCacheLock) {
+            cachedPresets?.let { return it }
+            
+            val bandMode = getBandMode()
+            val presets = presetsPrefs.all.mapNotNull { (name, value) ->
+                try {
+                    val valueStr = value as? String ?: return@mapNotNull null
+                    parsePreset(name, valueStr)
+                } catch (e: Exception) {
+                    DolbyConstants.dlog(TAG, "Error parsing preset $name: ${e.message}")
+                    null
                 }
-            } catch (e: Exception) {
-                DolbyConstants.dlog(TAG, "Error parsing preset $name: ${e.message}")
-                null
             }
+            
+            cachedPresets = presets
+            return presets
+        }
+    }
+
+    private fun parsePreset(name: String, valueStr: String): EqualizerPreset? {
+        return try {
+            if (valueStr.contains("|")) {
+                val parts = valueStr.split("|")
+                val presetBandMode = BandMode.fromValue(parts[1])
+                val gains = parts[0].split(",").map { it.toInt() }.toIntArray()
+                EqualizerPreset(
+                    name = name,
+                    bandGains = deserializeGains(gains, presetBandMode),
+                    isUserDefined = true,
+                    bandMode = presetBandMode
+                )
+            } else {
+                val gains = valueStr.split(",").map { it.toInt() }.toIntArray()
+                EqualizerPreset(
+                    name = name,
+                    bandGains = deserializeGains(gains, BandMode.TEN_BAND),
+                    isUserDefined = true,
+                    bandMode = BandMode.TEN_BAND
+                )
+            }
+        } catch (e: Exception) {
+            DolbyConstants.dlog(TAG, "Error parsing preset value: ${e.message}")
+            null
         }
     }
 
@@ -593,6 +631,10 @@ class DolbyRepository(private val context: Context) {
             val gains = serializeGains(bandGains, bandMode).joinToString(",")
             val value = "$gains|${bandMode.value}"
             presetsPrefs.edit().putString(name, value).apply()
+            
+            synchronized(presetCacheLock) {
+                cachedPresets = null
+            }
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error adding user preset: ${e.message}")
         }
@@ -601,6 +643,10 @@ class DolbyRepository(private val context: Context) {
     fun deleteUserPreset(name: String) {
         try {
             presetsPrefs.edit().remove(name).apply()
+            
+            synchronized(presetCacheLock) {
+                cachedPresets = null
+            }
         } catch (e: Exception) {
             DolbyConstants.dlog(TAG, "Error deleting user preset: ${e.message}")
         }
@@ -701,7 +747,7 @@ class DolbyRepository(private val context: Context) {
         return result
     }
     
-    fun release() {
+    private fun release() {
         if (!isReleased) {
             DolbyConstants.dlog(TAG, "Releasing repository resources")
             isReleased = true
@@ -712,10 +758,17 @@ class DolbyRepository(private val context: Context) {
             }
         }
     }
+    
+    override fun close() {
+        release()
+    }
 
     companion object {
         private const val TAG = "DolbyRepository"
         private const val EFFECT_PRIORITY = 100
+        
+        private const val BASS_GAIN_MULTIPLIER = 1.4f
+        private const val TREBLE_GAIN_MULTIPLIER = 1.5f
         
         private val ATTRIBUTES_MEDIA = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
