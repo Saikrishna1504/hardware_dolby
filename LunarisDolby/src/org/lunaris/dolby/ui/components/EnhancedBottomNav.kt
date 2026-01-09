@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.lunaris.dolby.utils.*
 
@@ -47,28 +48,38 @@ fun EnhancedBottomNavigationBar(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val isHomeSelected = currentRoute == "settings"
+            val isEqualizerSelected = currentRoute == "equalizer"
+            val isAdvancedSelected = currentRoute == "advanced"
+            
             EnhancedNavItem(
                 icon = Icons.Default.Home,
                 label = "Home",
-                selected = currentRoute == "settings",
+                selected = isHomeSelected,
                 onClick = { onNavigate("settings") },
+                isMiddleItem = false,
+                isSiblingSelected = isAdvancedSelected,
                 modifier = Modifier.weight(1f)
             )
             
             EnhancedNavItem(
                 icon = Icons.Default.GraphicEq,
                 label = "Equalizer",
-                selected = currentRoute == "equalizer",
+                selected = isEqualizerSelected,
                 onClick = { onNavigate("equalizer") },
                 isEqualizer = true,
+                isMiddleItem = true,
+                isSiblingSelected = isHomeSelected || isAdvancedSelected,
                 modifier = Modifier.weight(1f)
             )
             
             EnhancedNavItem(
                 icon = Icons.Default.Settings,
                 label = "Advanced",
-                selected = currentRoute == "advanced",
+                selected = isAdvancedSelected,
                 onClick = { onNavigate("advanced") },
+                isMiddleItem = false,
+                isSiblingSelected = isHomeSelected,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -82,7 +93,9 @@ private fun EnhancedNavItem(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isEqualizer: Boolean = false
+    isEqualizer: Boolean = false,
+    isMiddleItem: Boolean = false,
+    isSiblingSelected: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val haptic = rememberHapticFeedback()
@@ -117,8 +130,22 @@ private fun EnhancedNavItem(
         label = "background_height"
     )
     
+    val horizontalPadding by animateDpAsState(
+        targetValue = when {
+            isMiddleItem && isSiblingSelected -> 4.dp
+            else -> 8.dp
+        },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "horizontal_padding"
+    )
+    
     Box(
-        modifier = modifier.wrapContentWidth(Alignment.CenterHorizontally),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -199,7 +226,9 @@ private fun EnhancedNavItem(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = label,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontSize = 13.sp
+                            ),
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 1
