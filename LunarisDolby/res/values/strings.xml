@@ -45,6 +45,7 @@
     <string name="dolby_reset_all_toast">Succesfully reset all profiles</string>
     <string name="dolby_hp_virtualizer_dolby_strength">Surround virtualizer Strength</string>
     <string name="dolby_dialogue_enhancer_dolby_strength">Dialogue enhancer Strength</string>
+    <string name="dolby_notification_listener_label">Dolby Atmos Service</string>
 
     <!-- Dolby profiles -->
     <string name="dolby_profile_dynamic">Dynamic</string>

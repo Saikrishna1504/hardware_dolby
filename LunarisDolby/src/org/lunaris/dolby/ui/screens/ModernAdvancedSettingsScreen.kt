@@ -135,6 +135,9 @@ private fun ModernAdvancedSettingsContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        item {
+            NotificationListenerPermissionCard()
+        }
         if (state.settings.enabled) {
             item {
                 ModernSettingsCard(
