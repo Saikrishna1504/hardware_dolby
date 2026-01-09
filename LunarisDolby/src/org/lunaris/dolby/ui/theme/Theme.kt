@@ -117,6 +117,7 @@ private val DolbyTypography = Typography(
     )
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DolbyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -154,8 +155,9 @@ fun DolbyTheme(
         }
     }
 
-    MaterialTheme(
+    MaterialExpressiveTheme(
         colorScheme = colorScheme,
+        motionScheme = MotionScheme.expressive(),
         shapes = ExpressiveShapes,
         typography = DolbyTypography,
         content = content
