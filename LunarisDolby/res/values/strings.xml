@@ -111,6 +111,8 @@
     <string name="app_profiles_default">Default</string>
     <string name="app_profiles_change">Change</string>
     <string name="app_profiles_assigned">Assigned: %1$s</string>
+    <string name="app_profiles_headphone_only">Headphone/BT only mode</string>
+    <string name="app_profiles_headphone_only_description">Only switch profiles when earphones or Bluetooth audio devices are connected</string>
 
     <!-- Preset Import/Export -->
     <string name="preset_import_export">Import/Export Presets</string>

@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.lunaris.dolby.R
 import org.lunaris.dolby.service.AppProfileMonitorService
 
 @Composable
@@ -35,6 +36,9 @@ fun AppProfileSettingsCard(
     }
     var showToasts by remember {
         mutableStateOf(prefs.getBoolean("app_profile_show_toasts", true))
+    }
+    var headphoneOnlyMode by remember {
+        mutableStateOf(prefs.getBoolean("app_profile_headphone_only", false))
     }
     var showPermissionDialog by remember { mutableStateOf(false) }
 
@@ -139,6 +143,64 @@ fun AppProfileSettingsCard(
             AnimatedVisibility(visible = isEnabled) {
                 Column {
                     Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = context.getString(R.string.app_profiles_headphone_only),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = context.getString(R.string.app_profiles_headphone_only_description),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(12.dp))
+                        
+                        Switch(
+                            checked = headphoneOnlyMode,
+                            onCheckedChange = { enabled ->
+                                headphoneOnlyMode = enabled
+                                prefs.edit().putBoolean("app_profile_headphone_only", enabled).apply()
+                            },
+                            thumbContent = {
+                                Crossfade(targetState = headphoneOnlyMode, label = "headphone_switch_icon") { isChecked ->
+                                    if (isChecked) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Filled.Close,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                                checkedIconColor = MaterialTheme.colorScheme.onPrimary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -157,7 +219,7 @@ fun AppProfileSettingsCard(
                                 prefs.edit().putBoolean("app_profile_show_toasts", show).apply()
                             },
                             thumbContent = {
-                                Crossfade(targetState = showToasts, label = "switch_icon") { isChecked ->
+                                Crossfade(targetState = showToasts, label = "toast_switch_icon") { isChecked ->
                                     if (isChecked) {
                                         Icon(
                                             imageVector = Icons.Filled.Check,

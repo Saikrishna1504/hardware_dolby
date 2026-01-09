@@ -10,6 +10,8 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -27,6 +29,7 @@ class AppProfileMonitorService : Service() {
     private val switchHandler = Handler(Looper.getMainLooper())
     private lateinit var appProfileManager: AppProfileManager
     private lateinit var dolbyRepository: DolbyRepository
+    private lateinit var audioManager: AudioManager
     private val lastPackageName = AtomicReference<String?>(null)
     private var originalProfile: Int = -1
     private var isMonitoring = false
@@ -45,6 +48,7 @@ class AppProfileMonitorService : Service() {
         super.onCreate()
         appProfileManager = AppProfileManager(this)
         dolbyRepository = DolbyRepository(this)
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         originalProfile = dolbyRepository.getCurrentProfile()
     }
 
@@ -82,8 +86,34 @@ class AppProfileMonitorService : Service() {
         }
     }
 
+    private fun isHeadphoneConnected(): Boolean {
+        return try {
+            val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            devices.any { device ->
+                device.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                device.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+                device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                device.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+                device.type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                device.type == AudioDeviceInfo.TYPE_BLE_SPEAKER
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking headphone connection", e)
+            false
+        }
+    }
+
     private fun checkForegroundApp() {
         try {
+            val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+            val headphoneOnlyMode = prefs.getBoolean("app_profile_headphone_only", false)
+            
+            if (headphoneOnlyMode && !isHeadphoneConnected()) {
+                DolbyConstants.dlog(TAG, "Headphone-only mode enabled but no headphones connected, skipping profile switch")
+                return
+            }
+            
             val packageName = getForegroundPackage() ?: return
             
             val previousPackage = lastPackageName.getAndSet(packageName)
@@ -99,8 +129,12 @@ class AppProfileMonitorService : Service() {
                 pendingSwitchRunnable = Runnable {
                     synchronized(this) {
                         try {
+                            if (headphoneOnlyMode && !isHeadphoneConnected()) {
+                                DolbyConstants.dlog(TAG, "Headphones disconnected, aborting profile switch")
+                                return@Runnable
+                            }
+                            
                             val assignedProfile = appProfileManager.getAppProfile(packageName)
-                            val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
                             val showToasts = prefs.getBoolean("app_profile_show_toasts", true)
                             
                             if (assignedProfile >= 0) {
