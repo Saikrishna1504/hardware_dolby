@@ -28,8 +28,9 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     val profile = repository.getCurrentProfile()
                     
                     if (enabled) {
-                        repository.setDolbyEnabled(true)
                         repository.setCurrentProfile(profile)
+                        restoreProfileSettings(repository, context, profile)
+                        repository.setDolbyEnabled(true)
                     }
                     
                     val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
@@ -46,6 +47,50 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     Log.e(TAG, "Failed to initialize Dolby", e)
                 }
             }
+        }
+    }
+
+    private fun restoreProfileSettings(repository: DolbyRepository, context: Context, profile: Int) {
+        try {
+            val prefs = context.getSharedPreferences("profile_$profile", Context.MODE_PRIVATE)
+            
+            val ieqPreset = prefs.getString(DolbyConstants.PREF_IEQ, "0")?.toIntOrNull() ?: 0
+            repository.setIeqPreset(profile, ieqPreset)
+            
+            val hpVirtualizer = prefs.getBoolean(DolbyConstants.PREF_HP_VIRTUALIZER, false)
+            repository.setHeadphoneVirtualizerEnabled(profile, hpVirtualizer)
+            
+            val spkVirtualizer = prefs.getBoolean(DolbyConstants.PREF_SPK_VIRTUALIZER, false)
+            repository.setSpeakerVirtualizerEnabled(profile, spkVirtualizer)
+            
+            val stereoWidening = prefs.getInt(DolbyConstants.PREF_STEREO_WIDENING, 32)
+            repository.setStereoWideningAmount(profile, stereoWidening)
+            
+            val dialogueEnabled = prefs.getBoolean(DolbyConstants.PREF_DIALOGUE, false)
+            repository.setDialogueEnhancerEnabled(profile, dialogueEnabled)
+            
+            val dialogueAmount = prefs.getInt(DolbyConstants.PREF_DIALOGUE_AMOUNT, 6)
+            repository.setDialogueEnhancerAmount(profile, dialogueAmount)
+            
+            val bassLevel = prefs.getInt(DolbyConstants.PREF_BASS_LEVEL, 0)
+            if (bassLevel > 0) {
+                repository.setBassLevel(profile, bassLevel)
+            }
+            
+            val bassCurve = prefs.getInt(DolbyConstants.PREF_BASS_CURVE, 0)
+            repository.setBassCurve(profile, bassCurve)
+            
+            val trebleLevel = prefs.getInt(DolbyConstants.PREF_TREBLE_LEVEL, 0)
+            if (trebleLevel > 0) {
+                repository.setTrebleLevel(profile, trebleLevel)
+            }
+            
+            val volumeLeveler = prefs.getBoolean(DolbyConstants.PREF_VOLUME, false)
+            repository.setVolumeLevelerEnabled(profile, volumeLeveler)
+            
+            Log.d(TAG, "Successfully restored all settings for profile $profile")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to restore profile settings", e)
         }
     }
 
