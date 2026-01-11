@@ -30,6 +30,7 @@ import org.lunaris.dolby.R
 import org.lunaris.dolby.data.PresetExportManager
 import org.lunaris.dolby.domain.models.EqualizerPreset
 import org.lunaris.dolby.domain.models.EqualizerUiState
+import org.lunaris.dolby.ui.components.ModernConfirmDialog
 import org.lunaris.dolby.ui.viewmodel.EqualizerViewModel
 import org.lunaris.dolby.utils.ToastHelper
 
@@ -46,6 +47,8 @@ fun PresetImportExportScreen(
     var selectedPreset by remember { mutableStateOf<EqualizerPreset?>(null) }
     var showExportOptions by remember { mutableStateOf(false) }
     var showBatchExport by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var presetToDelete by remember { mutableStateOf<EqualizerPreset?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     
     val backgroundColor = Color(context.getColor(R.color.screen_background))
@@ -340,6 +343,10 @@ fun PresetImportExportScreen(
                                         )
                                         isLoading = false
                                     }
+                                },
+                                onDelete = {
+                                    presetToDelete = preset
+                                    showDeleteDialog = true
                                 }
                             )
                         }
@@ -422,6 +429,27 @@ fun PresetImportExportScreen(
             }
         )
     }
+    
+    if (showDeleteDialog && presetToDelete != null) {
+        ModernConfirmDialog(
+            title = "Delete Preset",
+            message = "Are you sure you want to delete '${presetToDelete!!.name}'? This will remove it from your preset list and cannot be undone.",
+            icon = Icons.Default.Delete,
+            onConfirm = {
+                scope.launch {
+                    viewModel.deletePreset(presetToDelete!!)
+                    ToastHelper.showToast(context, "Preset '${presetToDelete!!.name}' deleted")
+                    viewModel.loadEqualizer()
+                    showDeleteDialog = false
+                    presetToDelete = null
+                }
+            },
+            onDismiss = {
+                showDeleteDialog = false
+                presetToDelete = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -429,7 +457,8 @@ private fun PresetExportCard(
     preset: EqualizerPreset,
     onExportFile: () -> Unit,
     onCopyClipboard: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -476,6 +505,13 @@ private fun PresetExportCard(
                             Icons.Default.Share, 
                             contentDescription = "Share",
                             tint = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete, 
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 }
