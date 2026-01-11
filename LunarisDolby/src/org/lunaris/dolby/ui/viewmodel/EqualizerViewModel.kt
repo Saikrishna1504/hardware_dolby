@@ -289,6 +289,34 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun saveImportedPreset(preset: EqualizerPreset): String? {
+        val state = _uiState.value
+        if (state !is EqualizerUiState.Success) return "Invalid state"
+        
+        if (state.presets.any { it.name.equals(preset.name.trim(), ignoreCase = true) }) {
+            return context.getString(R.string.dolby_geq_preset_name_exists)
+        }
+        
+        if (preset.name.length > 50) {
+            return context.getString(R.string.dolby_geq_preset_name_too_long)
+        }
+        
+        viewModelScope.launch {
+            try {
+                repository.addUserPreset(
+                    preset.name.trim(), 
+                    preset.bandGains, 
+                    preset.bandMode
+                )
+                loadEqualizer()
+            } catch (e: Exception) {
+                DolbyConstants.dlog(TAG, "Error saving imported preset: ${e.message}")
+            }
+        }
+        
+        return null
+    }
+
     fun resetGains() {
         viewModelScope.launch {
             try {
