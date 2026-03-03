@@ -15,8 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,7 +27,7 @@ import org.lunaris.dolby.domain.models.DolbyUiState
 import org.lunaris.dolby.ui.components.*
 import org.lunaris.dolby.ui.viewmodel.DolbyViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ModernAdvancedSettingsScreen(
     viewModel: DolbyViewModel,
@@ -35,8 +36,8 @@ fun ModernAdvancedSettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val currentRoute by navController.currentBackStackEntryFlow.collectAsState(null)
     
-    val context = LocalContext.current
-    val backgroundColor = Color(context.getColor(R.color.screen_background))
+    val layoutDirection = LocalLayoutDirection.current
+    val cutoutInsets = WindowInsets.displayCutout.asPaddingValues()
 
     Scaffold(
         topBar = {
@@ -45,7 +46,8 @@ fun ModernAdvancedSettingsScreen(
                     Text(
                         stringResource(R.string.dolby_category_adv_settings),
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     ) 
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -53,32 +55,18 @@ fun ModernAdvancedSettingsScreen(
                 )
             )
         },
-        bottomBar = {
-            BottomNavigationBar(
-                currentRoute = currentRoute?.destination?.route ?: Screen.Advanced.route,
-                onNavigate = { route ->
-                    if (currentRoute?.destination?.route != route) {
-                        navController.navigate(route) {
-                            popUpTo(Screen.Settings.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                }
-            )
-        },
-        containerColor = backgroundColor
+        containerColor = MaterialTheme.colorScheme.surfaceContainer
     ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is DolbyUiState.Loading -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
             is DolbyUiState.Success -> {
@@ -86,7 +74,6 @@ fun ModernAdvancedSettingsScreen(
                     state = state,
                     viewModel = viewModel,
                     navController = navController,
-                    backgroundColor = backgroundColor,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -94,7 +81,6 @@ fun ModernAdvancedSettingsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
@@ -117,6 +103,47 @@ fun ModernAdvancedSettingsScreen(
                 }
             }
         }
+            
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(130.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+            )
+            
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(
+                        start = cutoutInsets.calculateStartPadding(layoutDirection),
+                        end = cutoutInsets.calculateEndPadding(layoutDirection),
+                        bottom = paddingValues.calculateBottomPadding()
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                FloatingNavToolbar(
+                    currentRoute = currentRoute?.destination?.route ?: "settings",
+                    onNavigate = { route ->
+                        if (currentRoute?.destination?.route != route) {
+                            navController.navigate(route) {
+                                popUpTo("settings") { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -125,13 +152,10 @@ private fun ModernAdvancedSettingsContent(
     state: DolbyUiState.Success,
     viewModel: DolbyViewModel,
     navController: NavController,
-    backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(backgroundColor),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -183,6 +207,37 @@ private fun ModernAdvancedSettingsContent(
                     Spacer(modifier = Modifier.height(12.dp))
                     Column {
                         ModernSettingSwitch(
+                            title = stringResource(R.string.dolby_mid_enhancer),
+                            subtitle = stringResource(R.string.dolby_mid_enhancer_summary),
+                            checked = state.profileSettings.midLevel > 0,
+                            onCheckedChange = { enabled ->
+                                if (enabled && state.profileSettings.midLevel == 0) {
+                                    viewModel.setMidLevel(40)
+                                } else if (!enabled) {
+                                    viewModel.setMidLevel(0)
+                                }
+                            },
+                            icon = Icons.Default.VolumeUp
+                        )
+
+                        AnimatedVisibility(visible = state.profileSettings.midLevel > 0) {
+                            Column {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                ModernSettingSlider(
+                                    title = stringResource(R.string.dolby_mid_level),
+                                    value = state.profileSettings.midLevel,
+                                    onValueChange = { viewModel.setMidLevel(it.toInt()) },
+                                    valueRange = 0f..100f,
+                                    steps = 19,
+                                    valueLabel = { "$it%" }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Column {
+                        ModernSettingSwitch(
                             title = stringResource(R.string.dolby_treble_enhancer),
                             subtitle = stringResource(R.string.dolby_treble_enhancer_summary),
                             checked = state.profileSettings.trebleLevel > 0,
@@ -210,8 +265,14 @@ private fun ModernAdvancedSettingsContent(
                             }
                         }
                     }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            
+            item {
+                ModernSettingsCard(
+                    title = "Volume Leveler",
+                    icon = Icons.Default.VolumeDown
+                ) {
                     ModernSettingSwitch(
                         title = stringResource(R.string.dolby_volume_leveler),
                         subtitle = stringResource(R.string.dolby_volume_leveler_summary),
@@ -293,7 +354,7 @@ private fun ModernAdvancedSettingsContent(
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                 ) {
                     Row(
@@ -319,7 +380,7 @@ private fun ModernAdvancedSettingsContent(
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                 ) {
                     Row(
@@ -334,7 +395,7 @@ private fun ModernAdvancedSettingsContent(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Enable Dolby Atmos to access advanced settings",
+                            text = stringResource(R.string.dolby_adv_settings_footer),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
@@ -342,26 +403,9 @@ private fun ModernAdvancedSettingsContent(
                 }
             }
         }
-
-        item {
-            AppProfileSettingsCard(
-                onManageClick = { navController.navigate("app_profiles") }
-            )
-        }
         
         item {
-            Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(70.dp))
         }
     }
-}
-
-@Composable
-private fun BottomNavigationBar(
-    currentRoute: String,
-    onNavigate: (String) -> Unit
-) {
-    EnhancedBottomNavigationBar(
-        currentRoute = currentRoute,
-        onNavigate = onNavigate
-    )
 }

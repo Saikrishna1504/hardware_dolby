@@ -31,14 +31,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import kotlinx.coroutines.launch
 import org.lunaris.dolby.R
 import org.lunaris.dolby.utils.*
 import kotlin.math.absoluteValue
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ProfileCarousel(
     currentProfile: Int,
@@ -92,9 +91,9 @@ fun ProfileCarousel(
     
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceBright
         )
     ) {
         Column(
@@ -105,6 +104,7 @@ fun ProfileCarousel(
                 text = stringResource(R.string.dolby_profile_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             
@@ -167,7 +167,7 @@ fun ProfileCarousel(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ProfileCard(
     profile: String,
@@ -198,7 +198,7 @@ private fun ProfileCard(
                 scaleY = scale
                 this.alpha = alpha
             },
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isSelected) 8.dp else 2.dp
         )
@@ -221,10 +221,7 @@ private fun ProfileCard(
             ) {
                 val iconScale by animateFloatAsState(
                     targetValue = if (isSelected) 1f else 0.85f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
-                    ),
+                    animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
                     label = "icon_scale"
                 )
                 

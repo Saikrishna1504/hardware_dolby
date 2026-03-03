@@ -34,6 +34,8 @@ class AppProfileMonitorService : Service() {
     private var originalProfile: Int = -1
     private var isMonitoring = false
     private var pendingSwitchRunnable: Runnable? = null
+    private var hasOriginalProfile = false
+    private var lastProfileChangeTime: Long = 0
 
     private val checkForegroundAppRunnable = object : Runnable {
         override fun run() {
@@ -49,7 +51,17 @@ class AppProfileMonitorService : Service() {
         appProfileManager = AppProfileManager(this)
         dolbyRepository = DolbyRepository(this)
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        originalProfile = dolbyRepository.getCurrentProfile()
+        
+        val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+        val savedProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
+        
+        if (!hasOriginalProfile) {
+            originalProfile = savedProfile
+            hasOriginalProfile = true
+            DolbyConstants.dlog(TAG, "Service created - saved original profile: $originalProfile")
+        } else {
+            DolbyConstants.dlog(TAG, "Service created - keeping existing original profile: $originalProfile")
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -63,7 +75,15 @@ class AppProfileMonitorService : Service() {
     private fun startMonitoring() {
         if (!isMonitoring) {
             isMonitoring = true
-            DolbyConstants.dlog(TAG, "Started monitoring foreground app")
+            
+            if (!hasOriginalProfile) {
+                val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+                originalProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
+                hasOriginalProfile = true
+                DolbyConstants.dlog(TAG, "Re-initialized original profile on start: $originalProfile")
+            }
+            
+            DolbyConstants.dlog(TAG, "Started monitoring foreground app (original profile: $originalProfile)")
             handler.post(checkForegroundAppRunnable)
         }
     }
@@ -78,8 +98,19 @@ class AppProfileMonitorService : Service() {
                 pendingSwitchRunnable = null
             }
             
-            if (originalProfile >= 0) {
+            if (hasOriginalProfile && originalProfile >= 0) {
+                DolbyConstants.dlog(TAG, "Restoring original profile: $originalProfile")
                 dolbyRepository.setCurrentProfile(originalProfile)
+                
+                val prefs = getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
+                val currentProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
+                if (currentProfile != originalProfile) {
+                    DolbyConstants.dlog(TAG, "WARNING: Profile restoration mismatch! Expected: $originalProfile, Got: $currentProfile")
+                } else {
+                    DolbyConstants.dlog(TAG, "Profile restored successfully")
+                }
+            } else {
+                DolbyConstants.dlog(TAG, "No valid original profile to restore (hasOriginal=$hasOriginalProfile, profile=$originalProfile)")
             }
             
             DolbyConstants.dlog(TAG, "Stopped monitoring foreground app")
@@ -139,7 +170,9 @@ class AppProfileMonitorService : Service() {
                             
                             if (assignedProfile >= 0) {
                                 DolbyConstants.dlog(TAG, "Switching to profile $assignedProfile for $packageName")
+                                lastProfileChangeTime = System.currentTimeMillis()
                                 dolbyRepository.setCurrentProfile(assignedProfile)
+                                DolbyConstants.dlog(TAG, "App profile active - original profile remains: $originalProfile")
                                 
                                 if (showToasts) {
                                     val profileName = getProfileName(assignedProfile)
@@ -149,9 +182,20 @@ class AppProfileMonitorService : Service() {
                                         "Dolby: $profileName ($appName)"
                                     )
                                 }
-                            } else if (originalProfile >= 0) {
-                                DolbyConstants.dlog(TAG, "Restoring original profile $originalProfile for $packageName")
-                                dolbyRepository.setCurrentProfile(originalProfile)
+                            } else {
+                                if (hasOriginalProfile && originalProfile >= 0) {
+                                    val currentProfile = prefs.getString(DolbyConstants.PREF_PROFILE, "0")?.toIntOrNull() ?: 0
+                                    
+                                    if (currentProfile != originalProfile) {
+                                        DolbyConstants.dlog(TAG, "Restoring original profile $originalProfile for $packageName (current: $currentProfile)")
+                                        lastProfileChangeTime = System.currentTimeMillis()
+                                        dolbyRepository.setCurrentProfile(originalProfile)
+                                    } else {
+                                        DolbyConstants.dlog(TAG, "Already on original profile $originalProfile, no change needed")
+                                    }
+                                } else {
+                                    DolbyConstants.dlog(TAG, "No original profile to restore (hasOriginal=$hasOriginalProfile, profile=$originalProfile)")
+                                }
                             }
                         } catch (e: Exception) {
                             Log.e(TAG, "Error switching profile", e)
@@ -213,8 +257,10 @@ class AppProfileMonitorService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        DolbyConstants.dlog(TAG, "Service destroyed")
         stopMonitoring()
         dolbyRepository.close()
+        hasOriginalProfile = false
     }
 
     companion object {

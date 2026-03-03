@@ -22,16 +22,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,7 +50,7 @@ enum class EqualizerViewMode {
     SLIDERS
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ModernEqualizerScreen(
     viewModel: EqualizerViewModel,
@@ -63,8 +63,8 @@ fun ModernEqualizerScreen(
     var viewMode by remember { mutableStateOf(EqualizerViewMode.CURVE) }
     val currentRoute by navController.currentBackStackEntryFlow.collectAsState(null)
     
-    val context = LocalContext.current
-    val backgroundColor = Color(context.getColor(R.color.screen_background))
+    val layoutDirection = LocalLayoutDirection.current
+    val cutoutInsets = WindowInsets.displayCutout.asPaddingValues()
 
     Scaffold(
         topBar = {
@@ -73,24 +73,41 @@ fun ModernEqualizerScreen(
                     Text(
                         stringResource(R.string.dolby_preset),
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     ) 
                 },
                 actions = {
                     IconButton(onClick = { showSaveDialog = true }) {
-                        Icon(Icons.Default.Save, contentDescription = "Save")
+                        Icon(
+                            Icons.Default.Save, 
+                            contentDescription = "Save",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                     IconButton(onClick = { showResetDialog = true }) {
-                        Icon(Icons.Default.RestartAlt, contentDescription = "Reset")
+                        Icon(
+                            Icons.Default.RestartAlt, 
+                            contentDescription = "Reset",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                     IconButton(onClick = { navController.navigate("import_export") }) {
-                        Icon(Icons.Default.ImportExport, contentDescription = "Import/Export")
+                        Icon(
+                            Icons.Default.ImportExport, 
+                            contentDescription = "Import/Export",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                     if (uiState is EqualizerUiState.Success) {
                         val state = uiState as EqualizerUiState.Success
                         if (state.currentPreset.isUserDefined) {
                             IconButton(onClick = { showDeleteDialog = true }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                Icon(
+                                    Icons.Default.Delete, 
+                                    contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
                     }
@@ -100,32 +117,18 @@ fun ModernEqualizerScreen(
                 )
             )
         },
-        bottomBar = {
-            BottomNavigationBar(
-                currentRoute = currentRoute?.destination?.route ?: Screen.Equalizer.route,
-                onNavigate = { route ->
-                    if (currentRoute?.destination?.route != route) {
-                        navController.navigate(route) {
-                            popUpTo(Screen.Settings.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                }
-            )
-        },
-        containerColor = backgroundColor
+        containerColor = MaterialTheme.colorScheme.surfaceContainer
     ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is EqualizerUiState.Loading -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
             is EqualizerUiState.Success -> {
@@ -134,7 +137,6 @@ fun ModernEqualizerScreen(
                     viewModel = viewModel,
                     viewMode = viewMode,
                     onViewModeChange = { viewMode = it },
-                    backgroundColor = backgroundColor,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -142,7 +144,6 @@ fun ModernEqualizerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
@@ -163,6 +164,47 @@ fun ModernEqualizerScreen(
                         )
                     }
                 }
+            }
+        }
+            
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(130.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+            )
+            
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(
+                        start = cutoutInsets.calculateStartPadding(layoutDirection),
+                        end = cutoutInsets.calculateEndPadding(layoutDirection),
+                        bottom = paddingValues.calculateBottomPadding()
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                FloatingNavToolbar(
+                    currentRoute = currentRoute?.destination?.route ?: "settings",
+                    onNavigate = { route ->
+                        if (currentRoute?.destination?.route != route) {
+                            navController.navigate(route) {
+                                popUpTo("settings") { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    }
+                )
             }
         }
     }
@@ -214,7 +256,6 @@ private fun ModernEqualizerContent(
     viewModel: EqualizerViewModel,
     viewMode: EqualizerViewMode,
     onViewModeChange: (EqualizerViewMode) -> Unit,
-    backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
     val isFlatPreset = state.currentPreset.name == stringResource(R.string.dolby_preset_default)
@@ -226,16 +267,15 @@ private fun ModernEqualizerContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(backgroundColor)
             .verticalScroll(scrollState)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = MaterialTheme.colorScheme.surfaceBright
             )
         ) {
             ModernPresetSelector(
@@ -253,7 +293,7 @@ private fun ModernEqualizerContent(
         if (!isBandModeCompatible && !isFlatPreset) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 )
@@ -273,7 +313,7 @@ private fun ModernEqualizerContent(
                     )
                     Column {
                         Text(
-                            text = "Band Mode Mismatch",
+                            text = stringResource(R.string.band_mode_mismatch),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onErrorContainer
@@ -292,9 +332,9 @@ private fun ModernEqualizerContent(
         
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = MaterialTheme.colorScheme.surfaceBright
             )
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
@@ -312,7 +352,8 @@ private fun ModernEqualizerContent(
                     Text(
                         text = "Equalizer View",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 
@@ -349,169 +390,230 @@ private fun ModernEqualizerContent(
         ) { mode ->
             when (mode) {
                 EqualizerViewMode.CURVE -> {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(380.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(20.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (canEdit) "Interactive Frequency Response" 
-                                          else "Frequency Response (Read-only)",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (canEdit) MaterialTheme.colorScheme.onSurface
-                                          else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (canEdit) MaterialTheme.colorScheme.secondaryContainer
-                                          else MaterialTheme.colorScheme.errorContainer
-                                ) {
-                                    Text(
-                                        text = "${state.bandMode.bandCount} bands",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (canEdit) MaterialTheme.colorScheme.onSecondaryContainer
-                                              else MaterialTheme.colorScheme.onErrorContainer,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                            Text(
-                                text = if (canEdit) 
-                                    "Drag the control points to adjust gain (±15 dB) • ${getFrequencyRange(state.bandMode)}"
-                                else
-                                    "Read-only view • Band mode mismatch",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (canEdit) MaterialTheme.colorScheme.onSurfaceVariant
-                                      else MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
-                            )
-                            InteractiveFrequencyResponseCurve(
-                                bandGains = state.bandGains,
-                                onBandGainChange = { index, newGain ->
-                                    if (canEdit) {
-                                        viewModel.setBandGain(index, newGain)
-                                    }
-                                },
-                                isActive = isActive,
-                                isEditable = canEdit,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                            )
-                        }
-                    }
+                    CurveViewContent(
+                        state = state,
+                        viewModel = viewModel,
+                        canEdit = canEdit,
+                        isActive = isActive
+                    )
                 }
-                
                 EqualizerViewMode.SLIDERS -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(180.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(20.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Frequency Response",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.secondaryContainer
-                                    ) {
-                                        Text(
-                                            text = getFrequencyRange(state.bandMode),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                FrequencyResponseCurve(
-                                    bandGains = state.bandGains,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f)
-                                )
-                            }
-                        }
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(380.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(20.dp)
-                            ) {
-                                Text(
-                                    text = if (canEdit) stringResource(R.string.dolby_geq_slider_label_gain)
-                                          else "${stringResource(R.string.dolby_geq_slider_label_gain)} (Read-only)",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (canEdit) MaterialTheme.colorScheme.onSurface
-                                          else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
-                                
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    itemsIndexed(state.bandGains) { index, bandGain ->
-                                        ModernEqualizerBand(
-                                            frequency = bandGain.frequency,
-                                            gain = bandGain.gain,
-                                            onGainChange = { newGain ->
-                                                if (canEdit) {
-                                                    viewModel.setBandGain(index, newGain)
-                                                }
-                                            },
-                                            enabled = canEdit
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    SlidersViewContent(
+                        state = state,
+                        viewModel = viewModel,
+                        canEdit = canEdit
+                    )
                 }
             }
         }
         
-        Spacer(modifier = Modifier.height(80.dp))
+        Spacer(modifier = Modifier.height(70.dp))
+    }
+}
+
+@Composable
+private fun CurveViewContent(
+    state: EqualizerUiState.Success,
+    viewModel: EqualizerViewModel,
+    canEdit: Boolean,
+    isActive: Boolean
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(380.dp),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceBright
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (canEdit) "Interactive Frequency Response" 
+                          else "Frequency Response (Read-only)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (canEdit) MaterialTheme.colorScheme.onSurface
+                          else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = if (canEdit) MaterialTheme.colorScheme.secondaryContainer
+                          else MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Text(
+                        text = "${state.bandMode.bandCount} bands",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (canEdit) MaterialTheme.colorScheme.onSecondaryContainer
+                              else MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+            Text(
+                text = if (canEdit) 
+                    "Drag the control points to adjust gain (±15 dB) • ${getFrequencyRange(state.bandMode)}"
+                else
+                    "Read-only view • Band mode mismatch",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (canEdit) MaterialTheme.colorScheme.onSurfaceVariant
+                      else MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+            )
+            InteractiveFrequencyResponseCurve(
+                bandGains = state.bandGains,
+                onBandGainChange = { index, newGain ->
+                    if (canEdit) {
+                        viewModel.setBandGain(index, newGain)
+                    }
+                },
+                isActive = isActive,
+                isEditable = canEdit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SlidersViewContent(
+    state: EqualizerUiState.Success,
+    viewModel: EqualizerViewModel,
+    canEdit: Boolean
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceBright
+            )
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.frequency_response),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Text(
+                            text = getFrequencyRange(state.bandMode),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                FrequencyResponseCurve(
+                    bandGains = state.bandGains,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(380.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceBright
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (canEdit) stringResource(R.string.dolby_geq_slider_label_gain)
+                              else "${stringResource(R.string.dolby_geq_slider_label_gain)} (Read-only)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (canEdit) MaterialTheme.colorScheme.onSurface
+                              else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    if (!canEdit) {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Text(
+                                    text = stringResource(R.string.locked),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    itemsIndexed(state.bandGains) { index, bandGain ->
+                        ModernEqualizerBand(
+                            frequency = bandGain.frequency,
+                            gain = bandGain.gain,
+                            onGainChange = { newGain ->
+                                if (canEdit) {
+                                    viewModel.setBandGain(index, newGain)
+                                }
+                            },
+                            enabled = canEdit
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -550,9 +652,9 @@ private fun ViewModeTile(
         else
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         shape = if (isSelected)
-            RoundedCornerShape(50.dp)
+            MaterialTheme.shapes.extraLarge
         else
-            RoundedCornerShape(16.dp),
+            MaterialTheme.shapes.large,
         border = if (isSelected)
             BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
         else null
@@ -567,9 +669,9 @@ private fun ViewModeTile(
             Surface(
                 modifier = Modifier.size(40.dp),
                 shape = if (isSelected)
-                    RoundedCornerShape(50.dp)
+                    MaterialTheme.shapes.extraLarge
                 else
-                    RoundedCornerShape(12.dp),
+                    MaterialTheme.shapes.medium,
                 color = if (isSelected)
                     MaterialTheme.colorScheme.primary
                 else
@@ -614,9 +716,9 @@ private fun BandModeSelector(
     
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceBright
         )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -632,14 +734,15 @@ private fun BandModeSelector(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Band Configuration",
+                    text = stringResource(R.string.band_configuration),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             
             Text(
-                text = "Choose equalizer precision: more bands = finer control",
+                text = stringResource(R.string.choose_equalizer_precision),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp)
@@ -680,7 +783,7 @@ private fun BandModeTile(
     Surface(
         onClick = {
             scope.launch {
-                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.DOUBLE_CLICK)
+                haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.CLICK)
             }
             onClick()
         },
@@ -692,9 +795,9 @@ private fun BandModeTile(
         else
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         shape = if (isSelected)
-            RoundedCornerShape(50.dp)
+            MaterialTheme.shapes.extraLarge
         else
-            RoundedCornerShape(16.dp),
+            MaterialTheme.shapes.large,
         border = if (isSelected)
             BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
         else null
@@ -709,9 +812,9 @@ private fun BandModeTile(
             Surface(
                 modifier = Modifier.size(32.dp),
                 shape = if (isSelected)
-                    RoundedCornerShape(50.dp)
+                    MaterialTheme.shapes.extraLarge
                 else
-                    RoundedCornerShape(10.dp),
+                    MaterialTheme.shapes.small,
                 color = if (isSelected)
                     MaterialTheme.colorScheme.primary
                 else
@@ -773,7 +876,8 @@ fun ModernPresetSelector(
             Text(
                 text = stringResource(R.string.dolby_geq_preset),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
         
@@ -790,7 +894,7 @@ fun ModernPresetSelector(
                 modifier = Modifier
                     .fillMaxWidth()
                     .menuAnchor(),
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
                 Row(
@@ -816,7 +920,8 @@ fun ModernPresetSelector(
                         Text(
                             text = currentPreset.name,
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
@@ -835,7 +940,10 @@ fun ModernPresetSelector(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(preset.name)
+                                Text(
+                                    preset.name,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                                 if (preset.isUserDefined) {
                                     Icon(
                                         imageVector = Icons.Default.Person,
@@ -881,7 +989,7 @@ fun ModernEqualizerBand(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Surface(
-            shape = RoundedCornerShape(8.dp),
+            shape = MaterialTheme.shapes.small,
             color = if (enabled) MaterialTheme.colorScheme.primaryContainer
                    else MaterialTheme.colorScheme.surfaceVariant
         ) {
@@ -918,7 +1026,7 @@ fun ModernEqualizerBand(
             modifier = Modifier
                 .graphicsLayer {
                     rotationZ = 270f
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                    transformOrigin = TransformOrigin(0f, 0f)
                 }
                 .layout { measurable, constraints ->
                     val placeable = measurable.measure(
@@ -957,7 +1065,7 @@ fun ModernEqualizerBand(
 
 @Composable
 private fun FrequencyResponseCurve(
-    bandGains: List<org.lunaris.dolby.domain.models.BandGain>,
+    bandGains: List<BandGain>,
     modifier: Modifier = Modifier
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -1059,7 +1167,8 @@ private fun SavePresetDialog(
             Text(
                 stringResource(R.string.dolby_geq_new_preset),
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             ) 
         },
         text = {
@@ -1070,11 +1179,23 @@ private fun SavePresetDialog(
                         presetName = it
                         errorMessage = null
                     },
-                    label = { Text(stringResource(R.string.dolby_geq_preset_name)) },
+                    label = { 
+                        Text(
+                            stringResource(R.string.dolby_geq_preset_name),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ) 
+                    },
                     isError = errorMessage != null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = MaterialTheme.shapes.medium,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        errorBorderColor = MaterialTheme.colorScheme.error,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
                 if (errorMessage != null) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -1094,7 +1215,11 @@ private fun SavePresetDialog(
                         errorMessage = error
                     }
                 },
-                shape = RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Text(stringResource(android.R.string.ok))
             }
@@ -1102,22 +1227,17 @@ private fun SavePresetDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                shape = RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.medium
             ) {
-                Text(stringResource(android.R.string.cancel))
+                Text(
+                    stringResource(android.R.string.cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
-        shape = RoundedCornerShape(28.dp)
-    )
-}
-
-@Composable
-private fun BottomNavigationBar(
-    currentRoute: String,
-    onNavigate: (String) -> Unit
-) {
-    EnhancedBottomNavigationBar(
-        currentRoute = currentRoute,
-        onNavigate = onNavigate
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }

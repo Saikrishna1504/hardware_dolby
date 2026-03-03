@@ -15,8 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,19 +25,21 @@ import androidx.navigation.NavController
 import org.lunaris.dolby.R
 import org.lunaris.dolby.domain.models.DolbyUiState
 import org.lunaris.dolby.ui.components.*
+import org.lunaris.dolby.ui.viewmodel.DolbyViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ModernDolbySettingsScreen(
-    viewModel: org.lunaris.dolby.ui.viewmodel.DolbyViewModel,
+    viewModel: DolbyViewModel,
     navController: NavController
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
+    var showCreditsDialog by remember { mutableStateOf(false) }
     val currentRoute by navController.currentBackStackEntryFlow.collectAsState(null)
     
-    val context = LocalContext.current
-    val backgroundColor = Color(context.getColor(R.color.screen_background))
+    val layoutDirection = LocalLayoutDirection.current
+    val cutoutInsets = WindowInsets.displayCutout.asPaddingValues()
 
     Scaffold(
         topBar = {
@@ -45,10 +48,18 @@ fun ModernDolbySettingsScreen(
                     Text(
                         stringResource(R.string.dolby_title),
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     ) 
                 },
                 actions = {
+                    IconButton(onClick = { showCreditsDialog = true }) {
+                        Icon(
+                            Icons.Default.Info, 
+                            contentDescription = "Credits",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     IconButton(onClick = { showResetDialog = true }) {
                         Icon(
                             Icons.Default.RestartAlt, 
@@ -62,30 +73,15 @@ fun ModernDolbySettingsScreen(
                 )
             )
         },
-        bottomBar = {
-            if (uiState is DolbyUiState.Success) {
-                BottomNavigationBar(
-                    currentRoute = currentRoute?.destination?.route ?: Screen.Settings.route,
-                    onNavigate = { route ->
-                        if (currentRoute?.destination?.route != route) {
-                            navController.navigate(route) {
-                                popUpTo(Screen.Settings.route) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    }
-                )
-            }
-        },
-        containerColor = backgroundColor
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface
     ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is DolbyUiState.Loading -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
@@ -93,9 +89,9 @@ fun ModernDolbySettingsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Text(
-                            text = "Loading...",
+                            text = stringResource(R.string.loading),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -106,7 +102,7 @@ fun ModernDolbySettingsScreen(
                 ModernDolbySettingsContent(
                     state = state,
                     viewModel = viewModel,
-                    backgroundColor = backgroundColor,
+                    navController = navController,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -114,7 +110,6 @@ fun ModernDolbySettingsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(backgroundColor)
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
@@ -137,6 +132,47 @@ fun ModernDolbySettingsScreen(
                 }
             }
         }
+            
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(130.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+            )
+            
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(
+                        start = cutoutInsets.calculateStartPadding(layoutDirection),
+                        end = cutoutInsets.calculateEndPadding(layoutDirection),
+                        bottom = paddingValues.calculateBottomPadding()
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                FloatingNavToolbar(
+                    currentRoute = currentRoute?.destination?.route ?: "settings",
+                    onNavigate = { route ->
+                        if (currentRoute?.destination?.route != route) {
+                            navController.navigate(route) {
+                                popUpTo("settings") { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    }
+                )
+            }
+        }
     }
 
     if (showResetDialog) {
@@ -151,19 +187,23 @@ fun ModernDolbySettingsScreen(
             onDismiss = { showResetDialog = false }
         )
     }
+    
+    if (showCreditsDialog) {
+        CreditsDialog(
+            onDismiss = { showCreditsDialog = false }
+        )
+    }
 }
 
 @Composable
 private fun ModernDolbySettingsContent(
     state: DolbyUiState.Success,
-    viewModel: org.lunaris.dolby.ui.viewmodel.DolbyViewModel,
-    backgroundColor: Color,
+    viewModel: DolbyViewModel,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(backgroundColor),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -208,20 +248,21 @@ private fun ModernDolbySettingsContent(
                 }
             }
         }
+
+        item {
+            AnimatedVisibility(
+                visible = state.settings.enabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                AppProfileSettingsCard(
+                    onManageClick = { navController.navigate("app_profiles") }
+                )
+            }
+        }
         
         item {
-            Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(70.dp))
         }
     }
-}
-
-@Composable
-private fun BottomNavigationBar(
-    currentRoute: String,
-    onNavigate: (String) -> Unit
-) {
-    EnhancedBottomNavigationBar(
-        currentRoute = currentRoute,
-        onNavigate = onNavigate
-    )
 }

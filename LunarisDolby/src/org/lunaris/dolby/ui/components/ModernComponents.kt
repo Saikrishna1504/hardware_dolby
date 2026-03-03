@@ -81,6 +81,7 @@ fun Modifier.squishable(
         }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DolbyMainCard(
     enabled: Boolean,
@@ -92,9 +93,9 @@ fun DolbyMainCard(
     
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceBright
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -106,8 +107,8 @@ fun DolbyMainCard(
                     .background(
                         brush = Brush.linearGradient(
                             colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer,
-                                MaterialTheme.colorScheme.tertiaryContainer
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
                             )
                         )
                     ),
@@ -133,7 +134,8 @@ fun DolbyMainCard(
                         Text(
                             text = stringResource(R.string.dolby_enable),
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -152,7 +154,11 @@ fun DolbyMainCard(
                             onEnabledChange(it)
                         },
                         thumbContent = {
-                            Crossfade(targetState = enabled, label = "switch_icon") { isChecked ->
+                            Crossfade(
+                                targetState = enabled,
+                                animationSpec = MaterialTheme.motionScheme.slowEffectsSpec(),
+                                label = "switch_icon"
+                            ) { isChecked ->
                                 if (isChecked) {
                                     Icon(
                                         imageVector = Icons.Rounded.Check,
@@ -167,15 +173,7 @@ fun DolbyMainCard(
                                     )
                                 }
                             }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                            checkedIconColor = MaterialTheme.colorScheme.onPrimary,
-                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        }
                     )
                 }
             }
@@ -206,9 +204,9 @@ fun ModernSettingsCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceBright
         )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -218,8 +216,8 @@ fun ModernSettingsCard(
             ) {
                 Surface(
                     modifier = Modifier.size(40.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -236,7 +234,8 @@ fun ModernSettingsCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             
@@ -245,6 +244,7 @@ fun ModernSettingsCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ModernSettingSwitch(
     title: String,
@@ -260,11 +260,11 @@ fun ModernSettingSwitch(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(if (checked) 28.dp else 16.dp)),
+            .clip(MaterialTheme.shapes.large),
         color = if (checked) 
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         else 
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     ) {
         Row(
             modifier = Modifier
@@ -294,7 +294,8 @@ fun ModernSettingSwitch(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = subtitle,
@@ -313,7 +314,11 @@ fun ModernSettingSwitch(
                     onCheckedChange(it)
                 },
                 thumbContent = {
-                    Crossfade(targetState = checked, label = "switch_icon") { isChecked ->
+                    Crossfade(
+                        targetState = checked,
+                        animationSpec = MaterialTheme.motionScheme.slowEffectsSpec(),
+                        label = "switch_icon"
+                    ) { isChecked ->
                         if (isChecked) {
                             Icon(
                                 imageVector = Icons.Rounded.Check,
@@ -328,15 +333,7 @@ fun ModernSettingSwitch(
                             )
                         }
                     }
-                },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.primary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                    checkedIconColor = MaterialTheme.colorScheme.onPrimary,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                }
             )
         }
     }
@@ -365,11 +362,12 @@ fun ModernSettingSlider(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
             )
             
             Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Text(
@@ -445,7 +443,8 @@ fun ModernSettingSelector(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Box {
@@ -456,8 +455,8 @@ fun ModernSettingSelector(
                         }
                         expanded = true 
                     },
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -466,13 +465,13 @@ fun ModernSettingSelector(
                         Text(
                             text = label,
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -483,7 +482,14 @@ fun ModernSettingSelector(
                     entryList.forEachIndexed { index, entry ->
                         val value = valueList.getOrNull(index)?.toIntOrNull() ?: return@forEachIndexed
                         DropdownMenuItem(
-                            text = { Text(entry) },
+                            text = { 
+                                Text(
+                                    entry,
+                                    color = if (value == currentValue) 
+                                        MaterialTheme.colorScheme.primary 
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                            },
                             onClick = {
                                 scope.launch {
                                     haptic.performHaptic(HapticFeedbackHelper.HapticIntensity.CLICK)
@@ -520,6 +526,7 @@ fun ModernIeqSelector(
             text = stringResource(R.string.dolby_ieq),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 12.dp)
         )
         Column(
@@ -595,11 +602,11 @@ private fun IeqTile(
         color = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
         else
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
         shape = if (isSelected)
-            RoundedCornerShape(50.dp)
+            MaterialTheme.shapes.extraLarge
         else
-            RoundedCornerShape(16.dp),
+            MaterialTheme.shapes.large,
         border = if (isSelected)
             BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
         else null
@@ -614,9 +621,9 @@ private fun IeqTile(
             Surface(
                 modifier = Modifier.size(40.dp),
                 shape = if (isSelected)
-                    RoundedCornerShape(50.dp)
+                    MaterialTheme.shapes.extraLarge
                 else
-                    RoundedCornerShape(12.dp),
+                    MaterialTheme.shapes.medium,
                 color = if (isSelected)
                     MaterialTheme.colorScheme.primary
                 else
@@ -672,19 +679,21 @@ fun ModernConfirmDialog(
             Text(
                 title,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             ) 
         },
         text = { 
             Text(
                 message,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             ) 
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                shape = RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.medium
             ) {
                 Text(stringResource(android.R.string.yes))
             }
@@ -692,11 +701,11 @@ fun ModernConfirmDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                shape = RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.medium
             ) {
                 Text(stringResource(android.R.string.no))
             }
         },
-        shape = RoundedCornerShape(28.dp)
+        shape = MaterialTheme.shapes.extraLarge
     )
 }

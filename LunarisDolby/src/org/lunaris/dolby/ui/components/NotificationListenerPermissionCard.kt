@@ -11,7 +11,6 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,10 +18,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.lunaris.dolby.R
 import org.lunaris.dolby.service.DolbyNotificationListener
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun NotificationListenerPermissionCard(
     modifier: Modifier = Modifier
@@ -42,7 +44,7 @@ fun NotificationListenerPermissionCard(
     ) {
         Card(
             modifier = modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer
             )
@@ -54,7 +56,7 @@ fun NotificationListenerPermissionCard(
                 ) {
                     Surface(
                         modifier = Modifier.size(40.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.medium,
                         color = MaterialTheme.colorScheme.error
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -68,14 +70,14 @@ fun NotificationListenerPermissionCard(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Notification Access Required",
+                        text = stringResource(R.string.notification_access_required),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
                 Text(
-                    text = "Enable notification access to keep Dolby Atmos running in the background and allow automatic profile switching.",
+                    text = stringResource(R.string.notification_access_required_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -83,9 +85,10 @@ fun NotificationListenerPermissionCard(
                 Button(
                     onClick = { showPermissionDialog = true },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
                     )
                 ) {
                     Icon(
@@ -94,7 +97,7 @@ fun NotificationListenerPermissionCard(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Enable Notification Access")
+                    Text(stringResource(R.string.enable_notification_access))
                 }
             }
         }
@@ -113,19 +116,17 @@ fun NotificationListenerPermissionCard(
             },
             title = { 
                 Text(
-                    "Enable Notification Access",
+                    stringResource(R.string.enable_notification_access),
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 ) 
             },
             text = {
                 Text(
-                    "This permission allows Dolby Atmos to:\n\n" +
-                    "• Run continuously in the background\n" +
-                    "• Automatically switch audio profiles\n" +
-                    "• Monitor foreground apps\n\n" +
-                    "Your notifications will not be read or modified.",
-                    style = MaterialTheme.typography.bodyMedium
+                    stringResource(R.string.notification_access_permission_details),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             confirmButton = {
@@ -134,20 +135,20 @@ fun NotificationListenerPermissionCard(
                         openNotificationListenerSettings(context)
                         showPermissionDialog = false
                     },
-                    shape = RoundedCornerShape(12.dp)
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("Open Settings")
+                    Text(stringResource(R.string.open_settings))
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showPermissionDialog = false },
-                    shape = RoundedCornerShape(12.dp)
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             },
-            shape = RoundedCornerShape(28.dp)
+            shape = MaterialTheme.shapes.extraLarge
         )
     }
 }

@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.util.Log
 import org.lunaris.dolby.data.DolbyRepository
 import org.lunaris.dolby.service.AppProfileMonitorService
+import org.lunaris.dolby.service.DolbyEffectService
 import org.lunaris.dolby.service.DolbyNotificationListener
 
 class BootCompletedReceiver : BroadcastReceiver() {
@@ -24,14 +25,8 @@ class BootCompletedReceiver : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED -> {
                 try {
                     val repository = DolbyRepository(context)
-                    val enabled = repository.getDolbyEnabled()
-                    val profile = repository.getCurrentProfile()
                     
-                    if (enabled) {
-                        repository.setCurrentProfile(profile)
-                        restoreProfileSettings(repository, context, profile)
-                        repository.setDolbyEnabled(true)
-                    }
+                    DolbyEffectService.start(context)
                     
                     val prefs = context.getSharedPreferences("dolby_prefs", Context.MODE_PRIVATE)
                     if (prefs.getBoolean("app_profile_monitoring_enabled", false)) {
@@ -41,56 +36,10 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     if (isNotificationListenerEnabled(context)) {
                         requestNotificationListenerRebind(context)
                     }
-                    
-                    Log.d(TAG, "Dolby initialized: enabled=$enabled, profile=$profile")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to initialize Dolby", e)
                 }
             }
-        }
-    }
-
-    private fun restoreProfileSettings(repository: DolbyRepository, context: Context, profile: Int) {
-        try {
-            val prefs = context.getSharedPreferences("profile_$profile", Context.MODE_PRIVATE)
-            
-            val ieqPreset = prefs.getString(DolbyConstants.PREF_IEQ, "0")?.toIntOrNull() ?: 0
-            repository.setIeqPreset(profile, ieqPreset)
-            
-            val hpVirtualizer = prefs.getBoolean(DolbyConstants.PREF_HP_VIRTUALIZER, false)
-            repository.setHeadphoneVirtualizerEnabled(profile, hpVirtualizer)
-            
-            val spkVirtualizer = prefs.getBoolean(DolbyConstants.PREF_SPK_VIRTUALIZER, false)
-            repository.setSpeakerVirtualizerEnabled(profile, spkVirtualizer)
-            
-            val stereoWidening = prefs.getInt(DolbyConstants.PREF_STEREO_WIDENING, 32)
-            repository.setStereoWideningAmount(profile, stereoWidening)
-            
-            val dialogueEnabled = prefs.getBoolean(DolbyConstants.PREF_DIALOGUE, false)
-            repository.setDialogueEnhancerEnabled(profile, dialogueEnabled)
-            
-            val dialogueAmount = prefs.getInt(DolbyConstants.PREF_DIALOGUE_AMOUNT, 6)
-            repository.setDialogueEnhancerAmount(profile, dialogueAmount)
-            
-            val bassLevel = prefs.getInt(DolbyConstants.PREF_BASS_LEVEL, 0)
-            if (bassLevel > 0) {
-                repository.setBassLevel(profile, bassLevel)
-            }
-            
-            val bassCurve = prefs.getInt(DolbyConstants.PREF_BASS_CURVE, 0)
-            repository.setBassCurve(profile, bassCurve)
-            
-            val trebleLevel = prefs.getInt(DolbyConstants.PREF_TREBLE_LEVEL, 0)
-            if (trebleLevel > 0) {
-                repository.setTrebleLevel(profile, trebleLevel)
-            }
-            
-            val volumeLeveler = prefs.getBoolean(DolbyConstants.PREF_VOLUME, false)
-            repository.setVolumeLevelerEnabled(profile, volumeLeveler)
-            
-            Log.d(TAG, "Successfully restored all settings for profile $profile")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to restore profile settings", e)
         }
     }
 

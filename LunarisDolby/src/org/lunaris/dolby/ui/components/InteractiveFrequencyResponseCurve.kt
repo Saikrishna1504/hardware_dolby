@@ -44,11 +44,12 @@ fun InteractiveFrequencyResponseCurve(
     val secondaryColor = MaterialTheme.colorScheme.secondary
     val primaryContainerColor = MaterialTheme.colorScheme.primaryContainer
     val errorColor = MaterialTheme.colorScheme.error
+    val surfaceContainerHighest = MaterialTheme.colorScheme.surfaceContainerHighest
     
     val backgroundColor = if (isActive) {
-        primaryContainerColor.copy(alpha = 0.6f)
+        primaryContainerColor.copy(alpha = 0.4f)
     } else {
-        surfaceColor.copy(alpha = 0.2f)
+        surfaceContainerHighest.copy(alpha = 0.3f)
     }
     
     val borderColor = if (isActive) {
@@ -74,12 +75,12 @@ fun InteractiveFrequencyResponseCurve(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(MaterialTheme.shapes.large)
                 .background(backgroundColor)
                 .border(
                     width = borderWidth,
                     color = borderColor,
-                    shape = RoundedCornerShape(16.dp)
+                    shape = MaterialTheme.shapes.large
                 )
                 .pointerInput(isEditable) {
                     if (isEditable) {
@@ -148,7 +149,7 @@ fun InteractiveFrequencyResponseCurve(
             val gridColor = if (isActive) {
                 surfaceColor.copy(alpha = 0.4f)
             } else {
-                surfaceColor
+                surfaceColor.copy(alpha = 0.3f)
             }
             
             val gridVerticalColor = if (isActive) {
@@ -353,14 +354,14 @@ fun InteractiveFrequencyResponseCurve(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 8.dp),
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.small,
                 color = primaryColor,
                 shadowElevation = 4.dp
             ) {
                 Text(
                     text = "${if (gainDb >= 0) "+" else ""}%.1f dB".format(gainDb),
                     style = MaterialTheme.typography.labelLarge,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
